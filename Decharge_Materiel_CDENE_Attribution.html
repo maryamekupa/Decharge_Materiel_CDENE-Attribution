@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Attribution du Matériel – CDÉNÉ</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="formMateriel">
+
+  <!-- BLOC Attribution -->
+  <form id="blocAttribution" class="bloc-formulaire" style="display:block;">
+    <div id="enTetePDF">
+      <div class="enTete-grid">
+        <!-- Logo et Contact -->
+        <div class="two-col">
+          <div class="enTete-logo">
+            <img src="https://pfst.cf2.poecdn.net/base/image/6d4995a47e5cf7a45172847ef067170a998ddf965eb35e3c6cf41c542b15c373?w=600&h=238" alt="Logo CDÉNÉ">
+          </div>
+          <div class="enTete-contact">
+            <span>✉️ Lyimdjo@cdene.ns.ca</span>
+            <span>☎️ 902-422-2752</span>
+          </div>
+        </div>
+        <!-- Titre centré -->
+        <h2 class="enTete-titre">Décharge du Matériel – CDÉNÉ</h2>
+        <!-- Instructions -->
+        <p class="enTete-instructions">
+          Ce formulaire est utilisé pour documenter <strong>l'attribution</strong> des biens du CDÉNÉ dans le cadre du cycle d'emploi d'un collaborateur. Il doit être complété par le gestionnaire direct ou son représentant. Une fois rempli, il doit être archivé et transmis aux ressources humaines.
+        </p>
+      </div>
+    </div>
+    
+    <fieldset classe= "bloc-title">
+      <legend>Attribution du matériel</legend>
+
+      <div class="two-col">
+        <div>
+          <label>Nom de l'employé</label>
+          <input type="text" id="nomAttribution">
+        </div>
+        <div>
+          <label>Nom du Gestionnaire</label>
+          <input type="text" id="gestionnaireAttribution">
+        </div>
+      </div>
+
+      <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
+        <button type="button" id="btnAddAttributionRow" class="no-pdf">➕ Entrer un matériel</button>
+      </div>
+
+      <div style="margin-top:12px; overflow-x:auto;">
+        <table id="attributionTable" style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr style="background:#dce6f1;">
+              <th>Type</th>
+              <th>Marque</th>
+              <th>Nom(-PC dans Système)</th>
+              <th>N° de série</th>
+              <th>Quantité</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="attributionTbody"></tbody>
+        </table>
+      </div>
+
+      <label style="margin-top:20px;">Déclaration de l'employé</label>
+      <textarea readonly class="bloc-texte" id="declarationAttribution" style="min-height:80px;">L’employé atteste avoir reçu l’intégralité du matériel, des équipements et des documents, qu’ils soient physiques ou électroniques, tels que décrits ou référencés dans le présent formulaire, et ce, sans limitation.</textarea>
+
+      <label>Réserves éventuelles</label>
+      <textarea id="reserveAttribution" class="bloc-texte" style="min-height:100px; width:80%;">Cliquez pour entrer les réserves éventuelles...</textarea>
+
+      <label>Date de signature</label>
+      <input type="date" id="dateRestitution1">
+
+      <div class="two-col">
+        <div>
+          <label>Signature du gestionnaire</label>
+          <input type="text" id="signatureEmployeur1" placeholder="Nom / signature">
+        </div>
+        <div>
+          <label>Signature de l'employé</label>
+          <input type="text" id="signatureEmploye1" placeholder="Nom / signature">
+        </div>
+      </div>
+    </fieldset>
+  </form>
+
+</div>
+
+<div class="center">
+  <button id="btnDownloadPDF" class="no-pdf">📄 Télécharger PDF</button>
+</div>
+
+
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
+
