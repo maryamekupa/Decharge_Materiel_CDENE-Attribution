@@ -575,7 +575,9 @@ if (btnPDF) {
 }
 
 
-//Generate pdf global////////////////////////////////
+//Generate pdf global/////////////////////////////////////
+///////////////////////////////////////////
+//////////////////////////////////////////
 async function genererPDFGlobal() {
   try {
     const { jsPDF } = window.jspdf;
@@ -634,3 +636,4 @@ const btnSendEmail = document.getElementById('btnSendEmail');
 if (btnSendEmail) {
   btnSendEmail.addEventListener('click', envoyerParEmail);
 }
+
