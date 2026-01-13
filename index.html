@@ -67,23 +67,27 @@
         </table>
       </div>
 
-      <label style="margin-top:20px;">Déclaration de l'employé</label>
-      <textarea readonly class="bloc-texte" id="declarationAttribution" style="min-height:80px;">L’employé atteste avoir reçu l’intégralité du matériel, des équipements et des documents, qu’ils soient physiques ou électroniques, tels que décrits ou référencés dans le présent formulaire, et ce, sans limitation.</textarea>
+      <div style="margin-top:20px;">
+        <label style="display:block; margin-bottom:8px;">Déclaration de l'employé</label>
+        <div id="declarationAttribution" class="declaration-text">L'employé atteste avoir reçu l'intégralité du matériel, des équipements et des documents, qu'ils soient physiques ou électroniques, tels que décrits ou référencés dans le présent formulaire, et ce, sans limitation.</div>
+      </div>
 
       <label>Réserves éventuelles</label>
-      <textarea id="reserveAttribution" class="bloc-texte" style="min-height:100px; width:80%;">Cliquez pour entrer les réserves éventuelles...</textarea>
+      <textarea id="reserveAttribution" class="bloc-texte reserve-textarea" style="width:100%;">Cliquez pour entrer les réserves éventuelles/Commentaire...</textarea>
 
-      <label>Date de signature</label>
-      <input type="date" id="dateRestitution1">
+      <div style="margin-top:auto;">
+        <label>Date de signature</label>
+        <input type="date" id="dateRestitution1">
 
-      <div class="two-col">
-        <div>
-          <label>Signature du gestionnaire</label>
-          <input type="text" id="signatureEmployeur1" placeholder="Nom / signature">
-        </div>
-        <div>
-          <label>Signature de l'employé</label>
-          <input type="text" id="signatureEmploye1" placeholder="Nom / signature">
+        <div class="two-col">
+          <div>
+            <label>Signature du gestionnaire</label>
+            <input type="text" id="signatureEmployeur1" placeholder="Nom / signature">
+          </div>
+          <div>
+            <label>Signature de l'employé</label>
+            <input type="text" id="signatureEmploye1" placeholder="Nom / signature">
+          </div>
         </div>
       </div>
     </fieldset>
