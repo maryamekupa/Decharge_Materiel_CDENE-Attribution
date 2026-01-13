@@ -578,62 +578,92 @@ if (btnPDF) {
 //Generate pdf global/////////////////////////////////////
 ///////////////////////////////////////////
 //////////////////////////////////////////
+//Generate pdf global////////////////////////////////
 async function genererPDFGlobal() {
   try {
     const { jsPDF } = window.jspdf;
     const element = document.getElementById('formMateriel');
-    
-    // 1. Préparation du style
+    if (!element) return;
+
+    // --- 1. PRÉPARATION DES STYLES (ÉCRAN -> CAPTURE) ---
     const originalStyle = element.style.cssText;
+    
+    // On uniformise le fond et on protège le contour vert
     element.style.boxShadow = 'none'; 
     element.style.margin = '0';
-    // On garde un padding suffisant pour le contour vert
     element.style.padding = '20px'; 
-    element.style.width = '1000px'; // On capture sur une base large pour la qualité
+    element.style.width = '1000px'; 
+    element.style.backgroundColor = '#c9d9e8'; // Même couleur que le formulaire
 
-    // 2. Capture
+    // --- 2. TRANSFORMATION DU TEXTAREA EN "FICHE" ---
+    // On cible le champ Réserves pour qu'il s'affiche en entier comme du texte simple
+    const reserveTextarea = document.querySelector('textarea');
+    let tempDiv = null;
+
+    if (reserveTextarea) {
+        tempDiv = document.createElement('div');
+        tempDiv.innerText = reserveTextarea.value || reserveTextarea.placeholder;
+        
+        // On copie le style pour que ça ressemble au bloc "Déclaration de l'employé"
+        tempDiv.style.width = reserveTextarea.offsetWidth + 'px';
+        tempDiv.style.fontSize = window.getComputedStyle(reserveTextarea).fontSize;
+        tempDiv.style.fontFamily = window.getComputedStyle(reserveTextarea).fontFamily;
+        tempDiv.style.color = "#222";
+        tempDiv.style.whiteSpace = "pre-wrap"; // Important pour voir toutes les lignes
+        tempDiv.style.background = "transparent";
+        tempDiv.style.border = "none";
+        tempDiv.style.padding = "0";
+        tempDiv.style.marginBottom = "20px";
+
+        // On masque le champ blanc et on insère le texte pur
+        reserveTextarea.style.display = 'none';
+        reserveTextarea.parentNode.insertBefore(tempDiv, reserveTextarea);
+    }
+
+    // --- 3. CAPTURE HAUTE DÉFINITION ---
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
-      backgroundColor: '#c9d9e8', // On utilise votre couleur de fond
+      backgroundColor: '#c9d9e8', // Remplit les bords extérieurs avec votre couleur
       logging: false
     });
 
+    // --- 4. RESTAURATION DE L'INTERFACE UTILISATEUR ---
     element.style.cssText = originalStyle;
+    if (reserveTextarea && tempDiv) {
+        reserveTextarea.style.display = 'block';
+        tempDiv.remove();
+    }
 
-    // 3. Configuration PDF
+    // --- 5. CRÉATION DU PDF ---
     const imgData = canvas.toDataURL('image/png');
     const pdfWidth = 595.28; // Largeur A4
-    const pdfHeight = 841.89;
-
-    // --- CORRECTION POUR NE PAS COUPER ---
-    // On définit une marge de sécurité de 15 points
-    const margin = 15; 
-    const usableWidth = pdfWidth - (margin * 2); 
-    // On calcule la hauteur proportionnelle à la largeur utilisable
+    const margin = 15; // Marge de sécurité pour ne pas couper le cadre vert
+    const usableWidth = pdfWidth - (margin * 2);
     const imgHeight = (canvas.height * usableWidth) / canvas.width;
 
-    const finalPdfHeight = Math.max(pdfHeight, imgHeight + (margin * 2));
-    const pdf = new jsPDF('p', 'pt', [pdfWidth, finalPdfHeight]);
+    // On crée le PDF (la hauteur s'adapte au contenu pour ne rien couper)
+    const pdf = new jsPDF('p', 'pt', [pdfWidth, imgHeight + (margin * 2)]);
 
-    // 4. On remplit le fond du PDF avec votre couleur bleu-gris
+    // On peint tout le fond du PDF avec votre couleur bleu-gris
+    // (RGB pour #c9d9e8 est environ 201, 217, 232)
     pdf.setFillColor(201, 217, 232); 
-    pdf.rect(0, 0, pdfWidth, finalPdfHeight, 'F');
+    pdf.rect(0, 0, pdfWidth, pdf.internal.pageSize.getHeight(), 'F');
 
-    // 5. AJOUT DE L'IMAGE CENTRÉE
-    // En utilisant 'margin' pour X et Y, l'image ne touchera jamais le bord
+    // On pose l'image centrée (X=15, Y=15)
     pdf.addImage(imgData, 'PNG', margin, margin, usableWidth, imgHeight);
     
-    pdf.save('Formulaire_CDENE_Parfait.pdf');
+    pdf.save('Formulaire_CDENE_vrf.pdf');
 
   } catch (error) {
-    console.error('Erreur PDF:', error);
+    console.error('Erreur lors de la génération du PDF:', error);
+    alert("Une erreur est survenue lors de la création du PDF.");
   }
 }
-
 // Ajouter l'écouteur pour le bouton Envoyer par Email
 const btnSendEmail = document.getElementById('btnSendEmail');
 if (btnSendEmail) {
   btnSendEmail.addEventListener('click', envoyerParEmail);
 }
+
 
