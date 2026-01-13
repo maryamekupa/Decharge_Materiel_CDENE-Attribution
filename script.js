@@ -4,14 +4,14 @@ function showCustomConfirm(message) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.innerHTML = `
-        <div class="modal-content">
-          <div class="modal-message">${message}</div>
-          <div class="modal-buttons">
-            <button class="modal-btn modal-btn-cancel" onclick="this.closest('.modal-overlay').remove(); window._confirmResolve(false);">Annuler</button>
-            <button class="modal-btn modal-btn-confirm" onclick="this.closest('.modal-overlay').remove(); window._confirmResolve(true);">Confirmer</button>
-          </div>
+      <div class="modal-content">
+        <div class="modal-message">${message}</div>
+        <div class="modal-buttons">
+          <button class="modal-btn modal-btn-cancel" onclick="this.closest('.modal-overlay').remove(); window._confirmResolve(false);">Annuler</button>
+          <button class="modal-btn modal-btn-confirm" onclick="this.closest('.modal-overlay').remove(); window._confirmResolve(true);">Confirmer</button>
         </div>
-      `;
+      </div>
+    `;
     document.body.appendChild(overlay);
     window._confirmResolve = resolve;
   });
@@ -22,13 +22,13 @@ function showCustomAlert(message) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.innerHTML = `
-        <div class="modal-content">
-          <div class="modal-message">${message}</div>
-          <div class="modal-buttons">
-            <button class="modal-btn modal-btn-confirm" onclick="this.closest('.modal-overlay').remove(); window._alertResolve();">OK</button>
-          </div>
+      <div class="modal-content">
+        <div class="modal-message">${message}</div>
+        <div class="modal-buttons">
+          <button class="modal-btn modal-btn-confirm" onclick="this.closest('.modal-overlay').remove(); window._alertResolve();">OK</button>
         </div>
-      `;
+      </div>
+    `;
     document.body.appendChild(overlay);
     window._alertResolve = resolve;
   });
@@ -55,18 +55,18 @@ function addAttributionRow() {
 
   const tr = document.createElement("tr");
   tr.innerHTML = `
-      <td>
-        <select class="typeSelect" onchange="updateAttrRow(this)">
-          <option value="">--</option>
-          ${Object.entries(attributionTypes).map(([key, value]) => `<option value="${key}">${value.label}</option>`).join('')}
-        </select>
-      </td>
-      <td><input type="text" class="marque" placeholder="Marque" /></td>
-      <td><input type="text" class="nom" placeholder="Nom" /></td>
-      <td><input type="text" class="serie" placeholder="N° de série" /></td>
-      <td><input type="number" class="quantite smallQty" min="1" value="1" /></td>
-      <td><button type="button" class="no-pdf" onclick="removeAttributionRow(this)">❌</button></td>
-    `;
+    <td>
+      <select class="typeSelect" onchange="updateAttrRow(this)">
+        <option value="">--</option>
+        ${Object.entries(attributionTypes).map(([key, value]) => `<option value="${key}">${value.label}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="text" class="marque" placeholder="Marque" /></td>
+    <td><input type="text" class="nom" placeholder="Nom" /></td>
+    <td><input type="text" class="serie" placeholder="N° de série" /></td>
+    <td><input type="number" class="quantite smallQty" min="1" value="1" /></td>
+    <td><button type="button" class="no-pdf" onclick="removeAttributionRow(this)">❌</button></td>
+  `;
   tbody.appendChild(tr);
 }
 
@@ -142,12 +142,12 @@ function createActionBlock(id) {
   select.className = 'small';
   select.name = `action[${id}][type]`;
   select.innerHTML = `
-      <option value="">-- Sélectionner l'action --</option>
-      <option value="Ajout">Ajout</option>
-      <option value="Changement">Changement</option>
-      <option value="Retour">Retour matériel</option>
-      <option value="Autre">Autre</option>
-    `;
+    <option value="">-- Sélectionner l'action --</option>
+    <option value="Ajout">Ajout</option>
+    <option value="Changement">Changement</option>
+    <option value="Retour">Retour matériel</option>
+    <option value="Autre">Autre</option>
+  `;
   left.appendChild(select);
 
   const dateInput = document.createElement('input');
@@ -189,9 +189,10 @@ function createActionBlock(id) {
   otherDesc.placeholder = 'Description (si Autre)';
   otherDesc.style.display = 'none';
 
-  const retourBlock = createMaterielSubBlock(id, 'retour');
-  const nouveauBlock = createMaterielSubBlock(id, 'nouveau');
-  const retourParActionBlock = createRetourParActionBlock(id);
+const retourBlock = createMaterielSubBlock(id, 'retour');
+const nouveauBlock = createMaterielSubBlock(id, 'nouveau');
+const retourParActionBlock = createRetourParActionBlock(id);
+
 
   block.appendChild(header);
   block.appendChild(content);
@@ -199,13 +200,16 @@ function createActionBlock(id) {
 
   select.addEventListener('change', (e) => {
     const val = e.target.value;
-    [retourBlock, nouveauBlock, retourParActionBlock].forEach(sb => { if (sb.parentNode === content) content.removeChild(sb); });
+    [retourBlock, nouveauBlock].forEach(sb => { if (sb.parentNode === content) content.removeChild(sb); });
     otherDesc.style.display = 'none';
     if (val === 'Ajout') content.appendChild(nouveauBlock);
     else if (val === 'Changement') { content.appendChild(retourBlock); content.appendChild(nouveauBlock); }
-    else if (val === 'Retour') content.appendChild(retourParActionBlock);
+    else if (val === 'Retour') content.appendChild(retourBlock);
     else if (val === 'Autre') otherDesc.style.display = 'block';
   });
+
+ 
+
 
   const moveControls = document.createElement('div');
   moveControls.style.marginTop = '8px';
@@ -244,10 +248,7 @@ function duplicateAction(block) {
     const newName = name.replace(/action\[\d+\]/, `action[${newId}]`);
     el.setAttribute('name', newName);
   });
-  // Supprimer le bouton Dupliquer du clone
-  clone.querySelectorAll('button').forEach(btn => {
-    if (btn.textContent === 'Dupliquer') btn.remove();
-  });
+  clone.querySelectorAll('button').forEach(b => { if (!b.classList.contains('no-pdf')) b.classList.add('no-pdf'); });
   block.parentNode.insertBefore(clone, block.nextSibling);
 }
 
@@ -291,200 +292,62 @@ function createMaterielSubBlock(actionId, role) {
   return container;
 }
 
-/* ========== Bloc Restitution ========== */
-const returnConfig = {
-  'Cles': { title: 'Clés du bureau', columns:[{key:'info',label:'Quantité',type:'text'}], defaultRow:{info:''} },
-  'Badge': { title: 'Badge d\'accès', columns:[{key:'info',label:'Quantité',type:'text'}], defaultRow:{info:''} },
-  'LigneTel': { title: 'Téléphone Cellulaire', columns:[{key:'Marque',label:'Marque',type:'text'},{key:'info',label:'N° de série',type:'text'}], defaultRow:{Marque:'', info:''}},
-  'Laptop': { title: 'Ordinateur / Laptop', columns:[{key:'marque',label:'Marque',type:'text'},{key:'nom',label:"Nom de l'ordinateur",type:'text'},{key:'serie',label:'N° de série',type:'text'}], defaultRow:{marque:'',nom:'',serie:''}},
-  'Moniteur': { title: 'Moniteur', columns:[{key:'marque',label:'Marque',type:'text'},{key:'serie',label:'N° de série',type:'text'}], defaultRow:{marque:'',serie:''}},
-  'Tablette': { title: 'Tablette', columns:[{key:'marque',label:'Marque',type:'text'},{key:'serie',label:'N° de série',type:'text'}], defaultRow:{marque:'',serie:''}},
-  'Accessoire': { title: 'Accessoires', columns:[{key:'detail',label:'Précisez',type:'text'},{key:'marque',label:'Marque',type:'text'},{key:'serie',label:'N° de série',type:'text'}], defaultRow:{detail:'',marque:'',serie:''}},
-  'Autres': { title: 'Autres', columns:[{key:'detail',label:'Veuillez préciser',type:'text'}], defaultRow:{detail:''}},
-};
-
-/* ========== Restitution PAR ACTION (Bloc 3 complet) ========== */
+/* ========== Restitution PAR ACTION (AJOUT) ========== */
 function createRetourParActionBlock(actionId) {
-  const container = document.createElement('div');
-  container.className = 'sub-block restitution-block';
-  container.style.cssText = 'margin-top:12px;padding:15px;background:#fef9f0;border-radius:8px;border:2px solid #e74c3c;';
+  const wrap = document.createElement('div');
+  wrap.className = 'sub-block';
+  wrap.style.marginTop = '10px';
 
-  const title = document.createElement('h4');
-  title.textContent = 'Restitution du Matériel';
-  title.style.cssText = 'margin:0 0 15px 0;color:#c0392b;border-bottom:2px solid #e74c3c;padding-bottom:8px;';
-  container.appendChild(title);
+  const title = document.createElement('strong');
+  title.textContent = 'Matériel retourné';
+  wrap.appendChild(title);
 
-  const labelCb = document.createElement('label');
-  labelCb.textContent = 'Matériel restitué (Sélectionnez tous les matériels correspondants)';
-  labelCb.style.cssText = 'font-weight:bold;display:block;margin-bottom:10px;';
-  container.appendChild(labelCb);
+  Object.entries(returnConfig).forEach(([type, cfg]) => {
+    const line = document.createElement('div');
+    line.style.marginTop = '6px';
 
-  const checkboxesDiv = document.createElement('div');
-  checkboxesDiv.style.cssText = 'display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;';
-
-  const types = [
-    { type: 'Cles', label: 'Clés du bureau' },
-    { type: 'Badge', label: 'Badge d\'accès' },
-    { type: 'LigneTel', label: 'Téléphone Cellulaire' },
-    { type: 'Laptop', label: 'Ordinateur / Laptop' },
-    { type: 'Moniteur', label: 'Moniteur' },
-    { type: 'Tablette', label: 'Tablette' },
-    { type: 'Accessoire', label: 'Accessoires' },
-    { type: 'Autres', label: 'Autres' }
-  ];
-
-  const tablesContainer = document.createElement('div');
-  tablesContainer.className = 'restitution-tables';
-
-  types.forEach(t => {
-    const lbl = document.createElement('label');
-    lbl.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:6px 10px;background:#fff;border:1px solid #ccc;border-radius:5px;cursor:pointer;';
     const cb = document.createElement('input');
     cb.type = 'checkbox';
-    cb.dataset.type = t.type;
-    cb.dataset.actionId = actionId;
-    cb.onchange = function () {
-      toggleRestitutionTable(this, tablesContainer, actionId);
-    };
-    lbl.appendChild(cb);
-    lbl.appendChild(document.createTextNode(t.label));
-    checkboxesDiv.appendChild(lbl);
+    cb.dataset.type = type;
+
+    const lbl = document.createElement('label');
+    lbl.style.marginLeft = '6px';
+    lbl.textContent = cfg.title || type;
+
+    cb.addEventListener('change', () => {
+      const id = `action-${actionId}-return-${type}`;
+      if (cb.checked) {
+        if (!wrap.querySelector(`#${id}`)) {
+          const table = createReturnTable(type);
+          table.id = id;
+          wrap.appendChild(table);
+        }
+      } else {
+        wrap.querySelector(`#${id}`)?.remove();
+      }
+    });
+
+    line.appendChild(cb);
+    line.appendChild(lbl);
+    wrap.appendChild(line);
   });
 
-  container.appendChild(checkboxesDiv);
-  container.appendChild(tablesContainer);
-
-  // Motif
-  const motifDiv = document.createElement('div');
-  motifDiv.style.marginTop = '15px';
-  motifDiv.innerHTML = '<label style="font-weight:bold;">Motif de restitution :</label>';
-  const motifSelect = document.createElement('select');
-  motifSelect.innerHTML = '<option value="">-- Sélectionner --</option><option value="Réparation">Réparation</option><option value="Changement">Changement</option><option value="Départ">Départ</option><option value="Autres">Autres</option>';
-  motifDiv.appendChild(motifSelect);
-  container.appendChild(motifDiv);
-
-  const autresDiv = document.createElement('div');
-  autresDiv.style.cssText = 'display:none;margin-top:8px;';
-  autresDiv.innerHTML = '<label>Veuillez préciser :</label><input type="text" style="width:100%;">';
-  container.appendChild(autresDiv);
-
-  const dateDiv = document.createElement('div');
-  dateDiv.style.cssText = 'display:none;margin-top:8px;';
-  dateDiv.innerHTML = '<label>Date de départ :</label><input type="date">';
-  container.appendChild(dateDiv);
-
-  motifSelect.onchange = function () {
-    dateDiv.style.display = this.value === 'Départ' ? 'block' : 'none';
-    autresDiv.style.display = this.value === 'Autres' ? 'block' : 'none';
-  };
-
-  // Déclaration
-  const declDiv = document.createElement('div');
-  declDiv.style.marginTop = '15px';
-  declDiv.innerHTML = '<label style="font-weight:bold;">Déclaration de l\'employé</label><textarea readonly style="width:100%;min-height:60px;background:#f5f5f5;">L\'employé déclare avoir restitué tout matériel appartenant au CDÉNÉ et avoir complété la passation de consignes.</textarea>';
-  container.appendChild(declDiv);
-
-  // Réserves
-  const resDiv = document.createElement('div');
-  resDiv.style.marginTop = '12px';
-  resDiv.innerHTML = '<label style="font-weight:bold;">Réserves éventuelles</label><textarea style="width:100%;min-height:80px;" placeholder="Entrez vos réserves éventuelles ici..."></textarea>';
-  container.appendChild(resDiv);
-
-  // Date restitution
-  const dateRestDiv = document.createElement('div');
-  dateRestDiv.style.marginTop = '12px';
-  dateRestDiv.innerHTML = '<label style="font-weight:bold;">Date de restitution</label><input type="date" style="width:100%;">';
-  container.appendChild(dateRestDiv);
-
-  // Signatures
-  const sigDiv = document.createElement('div');
-  sigDiv.className = 'two-col';
-  sigDiv.style.marginTop = '12px';
-  sigDiv.innerHTML = '<div><label style="font-weight:bold;">Signature de l\'employé</label><input type="text"></div><div><label style="font-weight:bold;">Signature du gestionnaire</label><input type="text"></div>';
-  container.appendChild(sigDiv);
-
-  return container;
-}
-
-function toggleRestitutionTable(checkbox, container, actionId) {
-  const type = checkbox.dataset.type;
-  const tableId = `restTable-${actionId}-${type}`;
-
-  if (checkbox.checked) {
-    if (!document.getElementById(tableId)) {
-      const table = createRestitutionTable(type, actionId);
-      table.id = tableId;
-      container.appendChild(table);
-    }
-  } else {
-    const el = document.getElementById(tableId);
-    if (el) el.remove();
-  }
-}
-
-function createRestitutionTable(type, actionId) {
-  const cfg = returnConfig[type];
-  const wrap = document.createElement('div');
-  wrap.style.cssText = 'margin:10px 0;padding:10px;border:1px solid #7a9ab8;border-radius:8px;background:#eef6fb;';
-
-  const hdr = document.createElement('div');
-  hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
-  hdr.innerHTML = `<strong>${cfg.title}</strong>`;
-
-  const addBtn = document.createElement('button');
-  addBtn.type = 'button';
-  addBtn.textContent = 'Ajouter';
-  addBtn.className = 'no-pdf';
-  addBtn.onclick = () => addRestitutionRow(type, actionId);
-  hdr.appendChild(addBtn);
-  wrap.appendChild(hdr);
-
-  const table = document.createElement('table');
-  table.style.cssText = 'width:100%;border-collapse:collapse;margin-top:10px;';
-
-  let thHtml = '<tr>';
-  cfg.columns.forEach(c => {
-    thHtml += `<th style="text-align:left;padding:6px;border-bottom:2px solid #b8d5e8;">${c.label}</th>`;
-  });
-  thHtml += '<th style="width:80px;"></th></tr>';
-  table.innerHTML = `<thead>${thHtml}</thead><tbody></tbody>`;
-  wrap.appendChild(table);
-
-  addRestitutionRow(type, actionId);
   return wrap;
 }
 
-function addRestitutionRow(type, actionId) {
-  const cfg = returnConfig[type];
-  const tableId = `restTable-${actionId}-${type}`;
-  const wrap = document.getElementById(tableId);
-  if (!wrap) return;
 
-  const tbody = wrap.querySelector('tbody');
-  const tr = document.createElement('tr');
-  tr.style.borderBottom = '1px solid #e0eef7';
+/* ========== Bloc Restitution ========== */
+const returnConfig = {
+  'Cles': { columns:[{key:'info',label:'Quantité',type:'text'}], defaultRow:{info:''} },
+  'Badge': { columns:[{key:'info',label:'Quantité',type:'text'}], defaultRow:{info:''} },
+  'LigneTel': { columns:[{key:'Marque',label:'Marque',type:'text'},{key:'info',label:'N° de série',type:'text'}], defaultRow:{Marque:'', info:''}},
+  'Laptop': { columns:[{key:'marque',label:'Marque',type:'text'},{key:'nom',label:"Nom de l'ordinateur",type:'text'},{key:'serie',label:'N° de série',type:'text'}], defaultRow:{marque:'',nom:'',serie:''}},
+  'Moniteur': { columns:[{key:'marque',label:'Marque',type:'text'},{key:'serie',label:'N° de série',type:'text'}], defaultRow:{marque:'',serie:''}},
+  'Tablette': { columns:[{key:'marque',label:'Marque',type:'text'},{key:'serie',label:'N° de série',type:'text'}], defaultRow:{marque:'',serie:''}},
+  'Accessoire': { columns:[{key:'detail',label:'Précisez',type:'text'},{key:'marque',label:'Marque',type:'text'},{key:'serie',label:'N° de série',type:'text'}], defaultRow:{detail:'',marque:'',serie:''}},
+  'Autres': { columns:[{key:'detail',label:'Veuillez préciser',type:'text'}], defaultRow:{detail:''}},
+};
 
-  cfg.columns.forEach(() => {
-    const td = document.createElement('td');
-    td.style.padding = '6px';
-    td.innerHTML = '<input type="text" style="width:100%;padding:6px;border:1px solid #9fb7cc;border-radius:6px;">';
-    tr.appendChild(td);
-  });
-
-  const tdDel = document.createElement('td');
-  tdDel.style.padding = '6px';
-  const delBtn = document.createElement('button');
-  delBtn.type = 'button';
-  delBtn.textContent = 'Supprimer';
-  delBtn.className = 'no-pdf';
-  delBtn.onclick = () => tr.remove();
-  tdDel.appendChild(delBtn);
-  tr.appendChild(tdDel);
-
-  tbody.appendChild(tr);
-}
-
-/* ========== Restitution statique (si présent dans HTML) ========== */
 function handleReturnToggle(checkbox) {
   const type = checkbox.dataset.type;
   if (checkbox.checked) {
@@ -657,16 +520,19 @@ document.addEventListener('input', (e) => {
 
 // Observer pour détecter les nouveaux textareas ajoutés dynamiquement
 const mutationObserver = new MutationObserver((mutations) => {
+  let hasNewTextarea = false;
   mutations.forEach((mutation) => {
     if (mutation.addedNodes.length > 0) {
       mutation.addedNodes.forEach((node) => {
-        if (node.nodeType === 1) {
+        if (node.nodeType === 1) { // Node.ELEMENT_NODE
           if (node.tagName === 'TEXTAREA') {
+            hasNewTextarea = true;
             setTimeout(() => autoResizeTextarea(node), 10);
             node.addEventListener('input', () => autoResizeTextarea(node));
           } else if (node.querySelectorAll) {
             const textareas = node.querySelectorAll('textarea');
             if (textareas.length > 0) {
+              hasNewTextarea = true;
               textareas.forEach(ta => {
                 setTimeout(() => autoResizeTextarea(ta), 10);
                 ta.addEventListener('input', () => autoResizeTextarea(ta));
@@ -689,6 +555,7 @@ function initTextareaObserver() {
     attributes: false
   });
   
+  // Redimensionner tous les textareas existants
   resizeAllTextareas();
   document.querySelectorAll('textarea').forEach(ta => {
     ta.addEventListener('input', () => autoResizeTextarea(ta));
@@ -702,244 +569,67 @@ if (document.readyState === 'loading') {
   initTextareaObserver();
 }
 
-/* ========== PDF - FIT SUR UNE PAGE ========== */
 const btnPDF = document.getElementById('btnDownloadPDF');
 if (btnPDF) {
   btnPDF.addEventListener('click', genererPDFGlobal);
 }
 
+
+//Generate pdf global////////////////////////////////
 async function genererPDFGlobal() {
-  try { // Début obligatoire pour correspondre au catch de la fin
+  try {
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p', 'pt', 'a4');
-    const pageWidth = 595.28;
-    const pageHeight = 841.89;
-    const margin = 10;
+    const element = document.getElementById('formMateriel');
+    
+    // 1. Préparation du style
+    const originalStyle = element.style.cssText;
+    element.style.boxShadow = 'none'; 
+    element.style.margin = '0';
+    // On garde un padding suffisant pour le contour vert
+    element.style.padding = '20px'; 
+    element.style.width = '1000px'; // On capture sur une base large pour la qualité
 
-    // Fonction interne pour capturer un élément
-    async function captureElementToCanvas(element) {
-      const noPdfElements = element.querySelectorAll(".no-pdf");
-      const selects = element.querySelectorAll("select");
-      const textareas = element.querySelectorAll("textarea");
+    // 2. Capture
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#c9d9e8', // On utilise votre couleur de fond
+      logging: false
+    });
 
-      noPdfElements.forEach(el => el.style.display = 'none');
+    element.style.cssText = originalStyle;
 
-      const selectReplacements = [];
-      selects.forEach(sel => {
-        const span = document.createElement("span");
-        span.textContent = sel.options[sel.selectedIndex]?.text || "";
-        span.style.display = "inline-block";
-        span.style.minWidth = sel.offsetWidth + "px";
-        span.style.fontWeight = "600";
-        sel.parentNode.insertBefore(span, sel);
-        sel.style.display = 'none';
-        selectReplacements.push({ original: sel, replacement: span });
-      });
+    // 3. Configuration PDF
+    const imgData = canvas.toDataURL('image/png');
+    const pdfWidth = 595.28; // Largeur A4
+    const pdfHeight = 841.89;
 
-      const textareaReplacements = [];
-      textareas.forEach(textarea => {
-        const div = document.createElement("div");
-        div.innerHTML = textarea.value.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-        div.style.border = '1px solid #888';
-        div.style.borderRadius = '6px';
-        div.style.padding = '8px';
-        div.style.width = (textarea.offsetWidth - 16) + 'px';
-        div.style.minHeight = Math.max(textarea.scrollHeight, 60) + 'px';
-        div.style.display = 'block';
-        textarea.parentNode.insertBefore(div, textarea);
-        textarea.style.display = 'none';
-        textareaReplacements.push({ original: textarea, replacement: div });
-      });
+    // --- CORRECTION POUR NE PAS COUPER ---
+    // On définit une marge de sécurité de 15 points
+    const margin = 15; 
+    const usableWidth = pdfWidth - (margin * 2); 
+    // On calcule la hauteur proportionnelle à la largeur utilisable
+    const imgHeight = (canvas.height * usableWidth) / canvas.width;
 
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#c9d9e8'
-      });
+    const finalPdfHeight = Math.max(pdfHeight, imgHeight + (margin * 2));
+    const pdf = new jsPDF('p', 'pt', [pdfWidth, finalPdfHeight]);
 
-      // Remise en état de l'interface
-      noPdfElements.forEach(el => el.style.display = '');
-      selectReplacements.forEach(({original, replacement}) => {
-        original.style.display = '';
-        replacement.remove();
-      });
-      textareaReplacements.forEach(({original, replacement}) => {
-        original.style.display = '';
-        replacement.remove();
-      });
+    // 4. On remplit le fond du PDF avec votre couleur bleu-gris
+    pdf.setFillColor(201, 217, 232); 
+    pdf.rect(0, 0, pdfWidth, finalPdfHeight, 'F');
 
-      return canvas;
-    }
-
-    const element = document.getElementById('formMateriel') || 
-                    document.getElementById('blocAttribution') || 
-                    document.querySelector('.bloc-formulaire');
-
-    if (!element) {
-      await showCustomAlert('Erreur: Aucun formulaire trouvé.');
-      return;
-    }
-
-    const canvas = await captureElementToCanvas(element);
-    const usableWidth = pageWidth - margin * 2;
-    const usableHeight = pageHeight - margin * 2;
-
-    let imgWidth = usableWidth;
-    let imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    if (imgHeight > usableHeight) {
-      const scaleFactor = usableHeight / imgHeight;
-      imgHeight = usableHeight;
-      imgWidth = imgWidth * scaleFactor;
-    }
-
-    const xOffset = margin + (usableWidth - imgWidth) / 2;
-
-    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', xOffset, margin, imgWidth, imgHeight);
-    pdf.save('Formulaire_CDENE.pdf');
+    // 5. AJOUT DE L'IMAGE CENTRÉE
+    // En utilisant 'margin' pour X et Y, l'image ne touchera jamais le bord
+    pdf.addImage(imgData, 'PNG', margin, margin, usableWidth, imgHeight);
+    
+    pdf.save('Formulaire_CDENE_Parfait.pdf');
 
   } catch (error) {
     console.error('Erreur PDF:', error);
-    await showCustomAlert('Une erreur est survenue lors de la génération du PDF: ' + error.message);
   }
 }
 
-
-/* ========== Fonction pour envoyer le PDF par email ========== */
-async function envoyerParEmail() {
-  try {
-    const email = document.getElementById('courrielSuivi')?.value || '';
-    const nomEmployee = document.getElementById('nomAttribution')?.value || 'Attribution Matériel';
-
-    if (!email) {
-      await showCustomAlert('Veuillez remplir le champ email avant d\'envoyer.');
-      return;
-    }
-
-    if (!email.includes('@')) {
-      await showCustomAlert('Veuillez entrer une adresse email valide.');
-      return;
-    }
-
-    await showCustomAlert('Génération du PDF en cours...');
-
-    if (!window.html2canvas) {
-      await showCustomAlert('Erreur: html2canvas n\'est pas chargé.');
-      return;
-    }
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-      await showCustomAlert('Erreur: jsPDF n\'est pas chargé.');
-      return;
-    }
-
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p', 'pt', 'a4');
-    const pageWidth = 595.28;
-    const pageHeight = 841.89;
-    const margin = 10;
-
-    async function captureElementToCanvas(element) {
-      const noPdfElements = element.querySelectorAll(".no-pdf");
-      const selects = element.querySelectorAll("select");
-      const textareas = element.querySelectorAll("textarea");
-
-      noPdfElements.forEach(el => el.style.display = 'none');
-
-      const selectReplacements = [];
-      selects.forEach(sel => {
-        const span = document.createElement("span");
-        span.textContent = sel.options[sel.selectedIndex]?.text || "";
-        span.style.display = "inline-block";
-        span.style.minWidth = sel.offsetWidth + "px";
-        span.style.fontSize = "16px";
-        span.style.fontWeight = "600";
-        sel.parentNode.insertBefore(span, sel);
-        sel.style.display = 'none';
-        selectReplacements.push({ original: sel, replacement: span });
-      });
-
-      const textareaReplacements = [];
-      textareas.forEach(textarea => {
-        const div = document.createElement("div");
-        div.innerHTML = textarea.value.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-        div.style.fontFamily = 'Segoe UI, Arial, sans-serif';
-        div.style.fontSize = '16px';
-        div.style.lineHeight = '1.6';
-        div.style.whiteSpace = 'pre-wrap';
-        div.style.padding = '8px';
-        div.style.border = '1px solid #888';
-        div.style.borderRadius = '6px';
-        div.style.background = '#fff';
-        div.style.width = (textarea.offsetWidth - 16) + 'px';
-        div.style.minHeight = Math.max(textarea.scrollHeight, 60) + 'px';
-
-        textarea.parentNode.insertBefore(div, textarea);
-        textarea.style.display = 'none';
-        textareaReplacements.push({ original: textarea, replacement: div });
-      });
-
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#c9d9e8',
-        logging: false,
-        windowHeight: element.scrollHeight + 100
-      });
-
-      noPdfElements.forEach(el => el.style.display = '');
-      selectReplacements.forEach(({ original, replacement }) => {
-        original.style.display = '';
-        replacement.remove();
-      });
-      textareaReplacements.forEach(({ original, replacement }) => {
-        original.style.display = '';
-        replacement.remove();
-      });
-
-      return canvas;
-    }
-
-    const blocAttribution = document.getElementById('blocAttribution');
-    if (blocAttribution) {
-      const canvas = await captureElementToCanvas(blocAttribution);
-
-      const usableWidth = pageWidth - margin * 2;
-      const usableHeight = pageHeight - margin * 2;
-      let imgWidth = usableWidth;
-      let imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      if (imgHeight > usableHeight) {
-        const scaleFactor = usableHeight / imgHeight;
-        imgHeight = usableHeight;
-        imgWidth = imgWidth * scaleFactor;
-      }
-
-      const xOffset = margin + (usableWidth - imgWidth) / 2;
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', xOffset, margin, imgWidth, imgHeight);
-    }
-
-    const pdfBlob = pdf.output('blob');
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-
-    const downloadLink = document.createElement('a');
-    downloadLink.href = pdfUrl;
-    downloadLink.download = 'Attribution_CDENE_' + new Date().toISOString().split('T')[0] + '.pdf';
-    downloadLink.style.display = 'none';
-    document.body.appendChild(downloadLink);
-    downloadLink.click();
-
-    document.body.removeChild(downloadLink);
-    URL.revokeObjectURL(pdfUrl);
-
-    await showCustomAlert('✅ Formulaire téléchargé avec succès!\n\nVeuillez l\'envoyer à:\n' + email + '\n\nNote: Le fichier a été téléchargé automatiquement.');
-
-  } catch (error) {
-    console.error('Erreur:', error);
-    await showCustomAlert('❌ Une erreur est survenue:\n' + error.message);
-  }
-}
-
+// Ajouter l'écouteur pour le bouton Envoyer par Email
 const btnSendEmail = document.getElementById('btnSendEmail');
 if (btnSendEmail) {
   btnSendEmail.addEventListener('click', envoyerParEmail);
