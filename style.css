@@ -211,40 +211,39 @@ button:hover {
 
 /* Attribution Table - Largeurs de colonnes fixes */
 #attributionTable {
-    table-layout: fixed;
+    table-layout: fixed; /* 'fixed' est préférable pour le PDF pour éviter les sauts de colonne */
     width: 100%;
+    border-collapse: collapse;
 }
 
-#attributionTable th:nth-child(1), #attributionTable td:nth-child(1) { width: 180px; }
-#attributionTable th:nth-child(2), #attributionTable td:nth-child(2) { width: 120px; }
-#attributionTable th:nth-child(3), #attributionTable td:nth-child(3) { width: 180px; }
-#attributionTable th:nth-child(4), #attributionTable td:nth-child(4) { width: 140px; }
-#attributionTable th:nth-child(5), #attributionTable td:nth-child(5) { width: 70px; text-align: center; }
-#attributionTable th:nth-child(6), #attributionTable td:nth-child(6) { width: 60px; }
-
-#attributionTable td .quantite {
-    text-align: center;
-}
+/* On utilise des % pour que ça s'adapte à n'importe quel écran/PDF */
+#attributionTable th:nth-child(1), #attributionTable td:nth-child(1) { width: 25%; } /* Type */
+#attributionTable th:nth-child(2), #attributionTable td:nth-child(2) { width: 15%; } /* Marque */
+#attributionTable th:nth-child(3), #attributionTable td:nth-child(3) { width: 25%; } /* Nom */
+#attributionTable th:nth-child(4), #attributionTable td:nth-child(4) { width: 20%; } /* Série */
+#attributionTable th:nth-child(5), #attributionTable td:nth-child(5) { width: 10%; } /* Qté */
+#attributionTable th:nth-child(6), #attributionTable td:nth-child(6) { width: 5%; }  /* X */
 
 #attributionTable th,
 #attributionTable td {
-    padding: 10px 6px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    padding: 8px 4px;
+    /* On retire 'white-space: nowrap' qui empêchait le texte de respirer */
+    white-space: normal; 
+    overflow: visible;
     vertical-align: middle;
-    height: 50px;
 }
 
 #attributionTable input,
 #attributionTable select {
     width: 100%;
     box-sizing: border-box;
-    min-height: 36px;
-    padding: 8px;
-    font-size: 15px;
+    min-height: 55px;
+    padding: 15px 18px; /* Padding réduit pour gagner de la place */
+    font-size: 16px;  /* Taille légèrement réduite pour éviter les coupures */
+    border: 1px solid #ccc;
+    /* 2. Assure que le texte est bien centré verticalement */
+    line-height: 1.5 !important;
 }
-
 /* Modal styles */
 .modal-overlay {
     position: fixed;
@@ -403,3 +402,54 @@ div[style*="margin-top:auto"] {
     page-break-inside: avoid !important;
   }
 }
+* Style pour les petits conteneurs de checkbox */
+.checkbox-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  background: #ffffff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.85rem; /* Texte légèrement plus petit */
+  transition: background 0.2s;
+}
+
+.checkbox-item:hover {
+  background: #f0f0f0;
+}
+
+/* Taille de la case elle-même */
+.checkbox-item input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  cursor: pointer;
+}
+input, select {
+    height: auto; /* Permet au champ de s'adapter */
+    padding: 8px 4px; 
+    line-height: 1.2;
+    box-sizing: border-box; /* Important pour que le padding n'agrandisse pas le champ au-delà du parent */
+}
+@media print {
+    /* Force le conteneur à ne pas limiter la hauteur */
+    body, .bloc-formulaire, fieldset {
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        background-color: white !important; /* Mieux pour l'encre */
+    }
+
+    /* Empêche les coupures maladroites au milieu d'une ligne de tableau */
+    tr {
+        page-break-inside: avoid !important;
+    }
+
+    /* Cache les éléments inutiles sur le PDF */
+    .no-pdf, .no-print, button, .admin-toggle {
+        display: none !important;
+    }
+}
+
