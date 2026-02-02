@@ -209,7 +209,8 @@ button:hover {
     display: inline-block;
 }
 
-/* Attribution Table - Largeurs de colonnes fixes */
+
+
 #attributionTable {
     table-layout: fixed; /* 'fixed' est préférable pour le PDF pour éviter les sauts de colonne */
     width: 100%;
@@ -244,6 +245,7 @@ button:hover {
     /* 2. Assure que le texte est bien centré verticalement */
     line-height: 1.5 !important;
 }
+
 /* Modal styles */
 .modal-overlay {
     position: fixed;
@@ -402,7 +404,8 @@ div[style*="margin-top:auto"] {
     page-break-inside: avoid !important;
   }
 }
-* Style pour les petits conteneurs de checkbox */
+
+/* Style pour les petits conteneurs de checkbox */
 .checkbox-item {
   display: inline-flex;
   align-items: center;
@@ -452,4 +455,3 @@ input, select {
         display: none !important;
     }
 }
-
