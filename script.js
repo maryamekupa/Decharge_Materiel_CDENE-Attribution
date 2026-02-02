@@ -34,7 +34,7 @@ function showCustomAlert(message) {
   });
 }
 
-/* ========== Attribution (si le bouton existe) ========== */
+/* ========== Formulaire 1 Attribution du matériel (....) ========== */
 const attributionTypes = {
   'Cles': { label:'Clés du bureau', show:{marque:false, nom:false, serie:false, quantite:true} },
   'Badge': { label:'Badge d\'accès', show:{marque:false, nom:false, serie:false, quantite:true} },
@@ -102,17 +102,7 @@ if (btnAddAttr) {
   btnAddAttr.onclick = addAttributionRow;
 }
 
-/* ========== Bloc Suivi (si le bouton existe) ========== */
-const typesMateriel = ['Cles','Badge','LigneTel','Laptop','Moniteur','Tablette','Accessoire','Autres'];
-const materielFields = [
-  { key: 'type', label: 'Type de matériel', type: 'select', options: typesMateriel },
-  { key: 'marque', label: 'Marque', type: 'text' },
-  { key: 'nom', label: "Nom de l'ordinateur (si applicable)", type: 'text' },
-  { key: 'serie', label: 'N° de série', type: 'text' },
-  { key: 'etat', label: 'État', type: 'select', options: ['-- Sélectionner --','Bon','Moyen','Mauvais'] },
-  { key: 'comment', label: 'Commentaire', type: 'textarea' }
-];
-
+/* ========== Bloc 2 (Suivi) ========== */
 let actionCounter = 0;
 const actionsContainer = document.getElementById('actionsSuiviContainer');
 const btnAddAction = document.getElementById('btnAddAction');
@@ -122,8 +112,6 @@ if (btnAddAction && actionsContainer) {
     const actionId = ++actionCounter;
     const actionBlock = createActionBlock(actionId);
     actionsContainer.appendChild(actionBlock);
-    const firstInput = actionBlock.querySelector('select, input, textarea');
-    if (firstInput) firstInput.focus();
   });
 }
 
@@ -140,22 +128,19 @@ function createActionBlock(id) {
 
   const select = document.createElement('select');
   select.className = 'small';
-  select.name = `action[${id}][type]`;
   select.innerHTML = `
     <option value="">-- Sélectionner l'action --</option>
-    <option value="Ajout">Ajout</option>
-    <option value="Changement">Changement</option>
-    <option value="Retour">Retour matériel</option>
-    <option value="Autre">Autre</option>
+    <option value="Ajout">Ajout du matériel</option>
+    <option value="Changement">Changement du matériel</option>
+    <option value="Retour">Retour du matériel</option>
+    <option value="Autre">Autre Action</option>
   `;
   left.appendChild(select);
 
   const dateInput = document.createElement('input');
   dateInput.type = 'date';
-  dateInput.name = `action[${id}][date]`;
   dateInput.className = 'small';
   dateInput.style.width = '150px';
-  dateInput.title = 'Date de l\'action';
   left.appendChild(dateInput);
 
   header.appendChild(left);
@@ -163,7 +148,6 @@ function createActionBlock(id) {
   const btns = document.createElement('div');
   btns.style.display = 'flex';
   btns.style.gap = '8px';
-  btns.style.alignItems = 'center';
 
   const btnDup = document.createElement('button');
   btnDup.type = 'button';
@@ -185,14 +169,12 @@ function createActionBlock(id) {
   content.className = 'action-content';
 
   const otherDesc = document.createElement('textarea');
-  otherDesc.name = `action[${id}][otherDesc]`;
-  otherDesc.placeholder = 'Description (si Autre)';
+  otherDesc.placeholder = 'Déscription (si Autre)';
   otherDesc.style.display = 'none';
 
-const retourBlock = createMaterielSubBlock(id, 'retour');
-const nouveauBlock = createMaterielSubBlock(id, 'nouveau');
-const retourParActionBlock = createRetourParActionBlock(id);
-
+  const retourBlock = createMaterielSubBlock(id, 'retour');
+  const nouveauBlock = createMaterielSubBlock(id, 'nouveau');
+  const retourCheckboxBlock = createRetourCheckboxBlock(id);
 
   block.appendChild(header);
   block.appendChild(content);
@@ -200,172 +182,413 @@ const retourParActionBlock = createRetourParActionBlock(id);
 
   select.addEventListener('change', (e) => {
     const val = e.target.value;
-    [retourBlock, nouveauBlock].forEach(sb => { if (sb.parentNode === content) content.removeChild(sb); });
+    [retourBlock, nouveauBlock, retourCheckboxBlock].forEach(sb => { if (sb.parentNode === content) content.removeChild(sb); });
     otherDesc.style.display = 'none';
     if (val === 'Ajout') content.appendChild(nouveauBlock);
     else if (val === 'Changement') { content.appendChild(retourBlock); content.appendChild(nouveauBlock); }
-    else if (val === 'Retour') content.appendChild(retourBlock);
+    else if (val === 'Retour') content.appendChild(retourCheckboxBlock);
     else if (val === 'Autre') otherDesc.style.display = 'block';
   });
-
- 
-
-
-  const moveControls = document.createElement('div');
-  moveControls.style.marginTop = '8px';
-  moveControls.className = 'no-pdf';
-  const upBtn = document.createElement('button');
-  upBtn.type = 'button';
-  upBtn.textContent = '↑';
-  upBtn.title = 'Déplacer vers le haut';
-  upBtn.className = 'small';
-  upBtn.onclick = () => {
-    const prev = block.previousElementSibling;
-    if (prev) block.parentNode.insertBefore(block, prev);
-  };
-  const downBtn = document.createElement('button');
-  downBtn.type = 'button';
-  downBtn.textContent = '↓';
-  downBtn.title = 'Déplacer vers le bas';
-  downBtn.className = 'small';
-  downBtn.onclick = () => {
-    const next = block.nextElementSibling;
-    if (next) block.parentNode.insertBefore(next, block);
-  };
-  moveControls.appendChild(upBtn);
-  moveControls.appendChild(downBtn);
-  block.appendChild(moveControls);
 
   return block;
 }
 
 function duplicateAction(block) {
+  // 1. Créer le clone
   const clone = block.cloneNode(true);
   const newId = ++actionCounter;
   clone.dataset.actionId = newId;
-  clone.querySelectorAll('[name]').forEach(el => {
-    const name = el.getAttribute('name') || '';
-    const newName = name.replace(/action\[\d+\]/, `action[${newId}]`);
-    el.setAttribute('name', newName);
-  });
-  clone.querySelectorAll('button').forEach(b => { if (!b.classList.contains('no-pdf')) b.classList.add('no-pdf'); });
+
+  // 2. Gérer les boutons du clone
+  const select = clone.querySelector('select');
+  const btnDup = clone.querySelector('button:nth-of-type(1)'); // Premier bouton (Dupliquer)
+  const btnRemove = clone.querySelector('button:nth-of-type(2)'); // Deuxième bouton (Supprimer)
+
+  // Supprimer le bouton "Dupliquer" du clone
+  if (btnDup && btnDup.textContent === 'Dupliquer') {
+    btnDup.remove();
+  }
+
+  // Ré-attachement de l'événement Supprimer sur le clone
+  if (btnRemove) {
+    btnRemove.onclick = () => {
+      clone.remove();
+    };
+  }
+
+  // Ré-attachement de l'événement Change du Select
+  if (select) {
+    select.addEventListener('change', (e) => {
+      const val = e.target.value;
+      const content = clone.querySelector('.action-content');
+      const otherDesc = content.querySelector('textarea');
+
+      // Sous-blocs propres au clone
+      const retourBlock = createMaterielSubBlock(newId, 'retour');
+      const nouveauBlock = createMaterielSubBlock(newId, 'nouveau');
+      const retourCheckboxBlock = createRetourCheckboxBlock(newId);
+
+      // Nettoyage et affichage
+      content.querySelectorAll('.sub-block').forEach(sb => sb.remove());
+      otherDesc.style.display = 'none';
+
+      if (val === 'Ajout') content.appendChild(nouveauBlock);
+      else if (val === 'Changement') { content.appendChild(retourBlock); content.appendChild(nouveauBlock); }
+      else if (val === 'Retour') content.appendChild(retourCheckboxBlock);
+      else if (val === 'Autre') otherDesc.style.display = 'block';
+    });
+  }
+
+  // 3. Insérer le clone dans le DOM
   block.parentNode.insertBefore(clone, block.nextSibling);
 }
 
 function createMaterielSubBlock(actionId, role) {
   const container = document.createElement('div');
   container.className = 'sub-block';
-  container.dataset.role = role;
+  container.style.marginTop = '12px';
+  container.style.padding = '15px';
+  container.style.background = role === 'nouveau' ? '#e8f5e9' : '#fff3e0';
+  container.style.borderRadius = '8px';
+  container.style.border = role === 'nouveau' ? '2px solid #1e4f38' : '2px solid #aa711bff';
+
   const title = document.createElement('strong');
   title.textContent = (role === 'retour') ? 'Matériel retourné' : 'Matériel reçu';
+  title.style.display = 'block';
+  title.style.marginBottom = '12px';
+  title.style.color = role === 'nouveau' ? '#1e4f38' : '#aa711bff';
   container.appendChild(title);
 
-  materielFields.forEach(field => {
-    const fieldWrapper = document.createElement('div');
-    fieldWrapper.style.marginTop = '8px';
-    const label = document.createElement('label');
-    label.textContent = field.label;
-    fieldWrapper.appendChild(label);
+  const typeDiv = document.createElement('div');
+  typeDiv.style.marginBottom = '12px';
+  typeDiv.innerHTML = '<label style="font-weight:bold;">Type de matériel</label>';
+  const typeSelect = document.createElement('select');
+  typeSelect.innerHTML = `
+    <option value="">-- Sélectionner le type --</option>
+    <option value="Cles">Clés du bureau</option>
+    <option value="Badge">Badge d'accès</option>
+    <option value="LigneTel">Téléphone Cellulaire</option>
+    <option value="Laptop">Ordinateur / Laptop</option>
+    <option value="Moniteur">Moniteur</option>
+    <option value="Tablette">Tablette</option>
+    <option value="Accessoire">Accessoires</option>
+    <option value="Autres">Autres</option>
+  `;
+  typeDiv.appendChild(typeSelect);
+  container.appendChild(typeDiv);
 
-    let input;
-    if (field.type === 'select') {
-      input = document.createElement('select');
-      input.name = `action[${actionId}][${role}][${field.key}]`;
-      field.options.forEach(opt => {
-        const o = document.createElement('option');
-        o.value = opt;
-        o.textContent = opt;
-        input.appendChild(o);
-      });
-    } else if (field.type === 'textarea') {
-      input = document.createElement('textarea');
-      input.name = `action[${actionId}][${role}][${field.key}]`;
+  const fieldsContainer = document.createElement('div');
+
+  const marqueDiv = document.createElement('div');
+  marqueDiv.style.marginTop = '8px';
+  marqueDiv.style.display = 'none';
+  marqueDiv.innerHTML = '<label>Marque</label><input type="text">';
+  fieldsContainer.appendChild(marqueDiv);
+
+  const nomDiv = document.createElement('div');
+  nomDiv.style.marginTop = '8px';
+  nomDiv.style.display = 'none';
+  nomDiv.innerHTML = '<label>Nom de l\'ordinateur (si applicable)</label><input type="text">';
+  fieldsContainer.appendChild(nomDiv);
+
+  const serieDiv = document.createElement('div');
+  serieDiv.style.marginTop = '8px';
+  serieDiv.style.display = 'none';
+  serieDiv.innerHTML = '<label>N° de série</label><input type="text">';
+  fieldsContainer.appendChild(serieDiv);
+
+  const quantiteDiv = document.createElement('div');
+  quantiteDiv.style.marginTop = '8px';
+  quantiteDiv.style.display = 'none';
+  quantiteDiv.innerHTML = '<label>Quantité</label><input type="number" min="1" value="1" style="width:80px;">';
+  fieldsContainer.appendChild(quantiteDiv);
+
+  const etatDiv = document.createElement('div');
+  etatDiv.style.marginTop = '8px';
+  etatDiv.style.display = 'none';
+  etatDiv.innerHTML = '<label>État</label><select><option value="">-- Sélectionner --</option><option value="Bon">Bon</option><option value="Moyen">Moyen</option><option value="Mauvais">Mauvais</option></select>';
+  fieldsContainer.appendChild(etatDiv);
+
+  const commentDiv = document.createElement('div');
+  commentDiv.style.marginTop = '8px';
+  commentDiv.style.display = 'none';
+  commentDiv.innerHTML = '<label>Commentaire</label><textarea style="width:100%;min-height:60px;"></textarea>';
+  fieldsContainer.appendChild(commentDiv);
+
+  container.appendChild(fieldsContainer);
+
+  const fieldConfig = {
+    'Cles': { marque: false, nom: false, serie: false, quantite: true, etat: true, comment: true },
+    'Badge': { marque: false, nom: false, serie: false, quantite: true, etat: true, comment: true },
+    'LigneTel': { marque: true, nom: false, serie: true, quantite: false, etat: true, comment: true },
+    'Laptop': { marque: true, nom: true, serie: true, quantite: false, etat: true, comment: true },
+    'Moniteur': { marque: true, nom: false, serie: true, quantite: false, etat: true, comment: true },
+    'Tablette': { marque: true, nom: false, serie: true, quantite: false, etat: true, comment: true },
+    'Accessoire': { marque: true, nom: true, serie: true, quantite: false, etat: true, comment: true },
+    'Autres': { marque: true, nom: true, serie: true, quantite: false, etat: true, comment: true }
+  };
+
+  typeSelect.addEventListener('change', function() {
+    const config = fieldConfig[this.value];
+    if (config) {
+      marqueDiv.style.display = config.marque ? 'block' : 'none';
+      nomDiv.style.display = config.nom ? 'block' : 'none';
+      serieDiv.style.display = config.serie ? 'block' : 'none';
+      quantiteDiv.style.display = config.quantite ? 'block' : 'none';
+      etatDiv.style.display = config.etat ? 'block' : 'none';
+      commentDiv.style.display = config.comment ? 'block' : 'none';
     } else {
-      input = document.createElement('input');
-      input.type = 'text';
-      input.name = `action[${actionId}][${role}][${field.key}]`;
+      [marqueDiv, nomDiv, serieDiv, quantiteDiv, etatDiv, commentDiv].forEach(d => d.style.display = 'none');
     }
-    fieldWrapper.appendChild(input);
-    container.appendChild(fieldWrapper);
   });
+
+  // Signatures
+  const sigDiv = document.createElement('div');
+  sigDiv.className = 'two-col';
+  sigDiv.style.marginTop = '12px';
+  sigDiv.innerHTML = '<div><label style="font-weight:bold;">Signature de l\'employé</label><input type="text"></div><div><label style="font-weight:bold;">Signature du gestionnaire</label><input type="text"></div>';
+  container.appendChild(sigDiv);
+
 
   return container;
 }
 
-/* ========== Restitution PAR ACTION (AJOUT) ========== */
-function createRetourParActionBlock(actionId) {
-  const wrap = document.createElement('div');
-  wrap.className = 'sub-block';
-  wrap.style.marginTop = '10px';
+/* ========== Bloc 3 Restitution ========== */
+function createRetourCheckboxBlock(actionId) {
+  const container = document.createElement('div');
+  container.className = 'sub-block retour-checkbox-block';
+  container.style.marginTop = '12px';
+  container.style.padding = '15px';
+  container.style.background = '#fef9f0';
+  container.style.borderRadius = '8px';
+  container.style.border = '2px solid #c0392b';
 
-  const title = document.createElement('strong');
-  title.textContent = 'Matériel retourné';
-  wrap.appendChild(title);
+  const title = document.createElement('h4');
+  title.textContent = 'Restitution du Matériel';
+  title.style.margin = '0 0 15px 0';
+  title.style.color = '#c0392b';
+  title.style.borderBottom = '2px solid #c0392b';
+  title.style.paddingBottom = '8px';
+  container.appendChild(title);
 
-  Object.entries(returnConfig).forEach(([type, cfg]) => {
-    const line = document.createElement('div');
-    line.style.marginTop = '6px';
+  const labelCheck = document.createElement('label');
+  labelCheck.textContent = 'Matériel restitué (Sélectionnez tous les matériels correspondants)';
+  labelCheck.style.fontWeight = 'bold';
+  labelCheck.style.display = 'block';
+  labelCheck.style.marginBottom = '10px';
+  container.appendChild(labelCheck);
 
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.dataset.type = type;
+  const checkboxesDiv = document.createElement('div');
+  checkboxesDiv.style.display = 'flex';
+  checkboxesDiv.style.flexWrap = 'wrap';
+  checkboxesDiv.style.gap = '10px';
+  checkboxesDiv.style.marginBottom = '12px';
 
-    const lbl = document.createElement('label');
-    lbl.style.marginLeft = '6px';
-    lbl.textContent = cfg.title || type;
+  const materialTypes = [
+    { type: 'Cles', label: 'Clés du bureau' },
+    { type: 'Badge', label: 'Badge d\'accès' },
+    { type: 'LigneTel', label: 'Téléphone Cellulaire' },
+    { type: 'Laptop', label: 'Ordinateur / Laptop' },
+    { type: 'Moniteur', label: 'Moniteur' },
+    { type: 'Tablette', label: 'Tablette' },
+    { type: 'Accessoire', label: 'Accessoires' },
+    { type: 'Autres', label: 'Autres' }
+  ];
 
-    cb.addEventListener('change', () => {
-      const id = `action-${actionId}-return-${type}`;
-      if (cb.checked) {
-        if (!wrap.querySelector(`#${id}`)) {
-          const table = createReturnTable(type);
-          table.id = id;
-          wrap.appendChild(table);
+  const tablesContainer = document.createElement('div');
+  tablesContainer.style.marginTop = '12px';
+
+  materialTypes.forEach(mat => {
+    const label = document.createElement('label');
+    label.className = 'checkbox-item';
+    // Forcer le style pour que le label s'élargisse quand l'input apparaît
+    label.style.display = 'inline-flex';
+    label.style.alignItems = 'center';
+    label.style.whiteSpace = 'nowrap';
+    label.style.minHeight = '30px';
+    label.style.padding = '5px 10px';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.dataset.type = mat.type;
+    checkbox.dataset.actionId = actionId;
+    checkbox.style.marginRight = '8px';
+
+    const textSpan = document.createElement('span');
+    textSpan.textContent = mat.label;
+
+    label.appendChild(checkbox);
+    label.appendChild(textSpan);
+
+    // Champ auto-extensible pour "Autres"
+    if (mat.type === 'Autres') {
+      const preciserInput = document.createElement('input');
+      preciserInput.type = 'text';
+      preciserInput.placeholder = 'Précisez...';
+      preciserInput.style.display = 'none'; // Caché par défaut
+      preciserInput.style.marginLeft = '10px';
+      preciserInput.style.border = '1px solid #ccc';
+      preciserInput.style.borderRadius = '4px';
+      preciserInput.style.padding = '2px 5px';
+      preciserInput.style.width = '150px'; // largeur minimale de départ
+
+      label.appendChild(preciserInput);
+
+      // Auto-élargissement
+      preciserInput.addEventListener('input', function() {
+        const textLength = this.value.length;
+        const newWidth = Math.max(150, textLength * 8 + 20);
+        this.style.width = newWidth + 'px';
+      });
+
+      // Déclencheur
+      checkbox.addEventListener('change', function() {
+        if (this.checked) {
+          preciserInput.style.display = 'inline-block';
+          preciserInput.focus();
+        } else {
+          preciserInput.style.display = 'none';
         }
-      } else {
-        wrap.querySelector(`#${id}`)?.remove();
-      }
-    });
 
-    line.appendChild(cb);
-    line.appendChild(lbl);
-    wrap.appendChild(line);
+        if (typeof handleRetourActionToggle === "function") {
+          handleRetourActionToggle(this, tablesContainer, actionId);
+        }
+      });
+    } else {
+      // Comportement normal pour les autres cases
+      checkbox.addEventListener('change', function() {
+        if (typeof handleRetourActionToggle === "function") {
+          handleRetourActionToggle(this, tablesContainer, actionId);
+        }
+      });
+    }
+
+    checkboxesDiv.appendChild(label);
   });
 
-  return wrap;
+  container.appendChild(checkboxesDiv);
+  container.appendChild(tablesContainer);
+
+  // Motif
+  const motifDiv = document.createElement('div');
+  motifDiv.style.marginTop = '15px';
+  motifDiv.innerHTML = '<label style="font-weight:bold;">Motif de restitution :</label>';
+  const motifSelect = document.createElement('select');
+  motifSelect.innerHTML = '<option value="">-- Sélectionner --</option><option value="Reparation">En Réparation</option><option value="Endommager">Endommager</option><option value="Départ">Départ</option><option value="Autres">Autres</option>';
+  motifDiv.appendChild(motifSelect);
+  container.appendChild(motifDiv);
+
+  const ReparationDiv = document.createElement('div');
+  ReparationDiv.style.display = 'none';
+  ReparationDiv.style.marginTop = '8px';
+  ReparationDiv.innerHTML = '<label>Déscription:</label><input type="text" style="width:100%;">';
+  container.appendChild(ReparationDiv);
+
+  const EndommagerDiv = document.createElement('div');
+  EndommagerDiv.style.display = 'none';
+  EndommagerDiv.style.marginTop = '8px';
+  EndommagerDiv.innerHTML = '<label>Déscription:</label><input type="text" style="width:100%;">';
+  container.appendChild(EndommagerDiv);
+
+  const autresDiv = document.createElement('div');
+  autresDiv.style.display = 'none';
+  autresDiv.style.marginTop = '8px';
+  autresDiv.innerHTML = '<label>Veuillez préciser :</label><input type="text" style="width:100%;">';
+  container.appendChild(autresDiv);
+
+  const dateDiv = document.createElement('div');
+  dateDiv.style.display = 'none';
+  dateDiv.style.marginTop = '8px';
+  dateDiv.innerHTML = '<label>Date de départ :</label><input type="date">';
+  container.appendChild(dateDiv);
+
+  motifSelect.addEventListener('change', function() {
+    dateDiv.style.display = this.value === 'Départ' ? 'block' : 'none';
+    autresDiv.style.display = this.value === 'Autres' ? 'block' : 'none';
+    ReparationDiv.style.display = this.value === 'Reparation' ? 'block' : 'none';
+    EndommagerDiv.style.display = this.value === 'Endommager' ? 'block' : 'none';
+  });
+
+  // Déclaration (texte simple sans cadre, comme Attribution)
+  const declDiv = document.createElement('div');
+  declDiv.style.marginTop = '15px';
+
+  const declLabel = document.createElement('label');
+  declLabel.style.fontWeight = 'bold';
+  declLabel.style.display = 'block';
+  declLabel.style.marginBottom = '8px';
+  declLabel.textContent = 'Déclaration de l\'employé';
+  declDiv.appendChild(declLabel);
+
+  const declText = document.createElement('div');
+  declText.className = 'declaration-text';
+  declText.style.fontFamily = 'Segoe UI, Arial, sans-serif';
+  declText.style.fontSize = '18px';
+  declText.style.lineHeight = '1.7';
+  declText.style.color = '#222';
+  declText.style.whiteSpace = 'pre-wrap';
+  declText.style.wordWrap = 'break-word';
+  declText.style.padding = '0';
+  declText.style.margin = '8px 0';
+  declText.style.background = 'transparent';
+  declText.style.border = 'none';
+  declText.style.textAlign = 'justify';
+  declText.textContent = 'L\'employé déclare avoir restitué tout matériel appartenant au CDÉNÉ et avoir complété la passation de consignes.';
+  declDiv.appendChild(declText);
+
+  container.appendChild(declDiv);
+
+  // Réserves
+  const resDiv = document.createElement('div');
+  resDiv.style.marginTop = '12px';
+
+  const resLabel = document.createElement('label');
+  resLabel.style.fontWeight = 'bold';
+  resLabel.style.display = 'block';
+  resLabel.style.marginBottom = '8px';
+  resLabel.textContent = 'Réserves éventuelles (Remplie par le (a) gestionnaire)';
+  resDiv.appendChild(resLabel);
+
+  const resTextarea = document.createElement('textarea');
+  resTextarea.className = 'reserve-textarea';
+  resTextarea.style.width = '100%';
+  resTextarea.style.minHeight = '80px';
+  resTextarea.placeholder = 'Entrez vos réserves éventuelles ici...';
+  resDiv.appendChild(resTextarea);
+
+  container.appendChild(resDiv);
+
+  // Date restitution
+  const dateRestDiv = document.createElement('div');
+  dateRestDiv.style.marginTop = '12px';
+  dateRestDiv.innerHTML = '<label style="font-weight:bold;">Date de restitution</label><input type="date">';
+  container.appendChild(dateRestDiv);
+
+  // Signatures
+  const sigDiv = document.createElement('div');
+  sigDiv.className = 'two-col';
+  sigDiv.style.marginTop = '12px';
+  sigDiv.innerHTML = '<div><label style="font-weight:bold;">Signature de l\'employé</label><input type="text"></div><div><label style="font-weight:bold;">Signature du gestionnaire</label><input type="text"></div>';
+  container.appendChild(sigDiv);
+
+  return container;
 }
 
-
-/* ========== Bloc Restitution ========== */
-const returnConfig = {
-  'Cles': { columns:[{key:'info',label:'Quantité',type:'text'}], defaultRow:{info:''} },
-  'Badge': { columns:[{key:'info',label:'Quantité',type:'text'}], defaultRow:{info:''} },
-  'LigneTel': { columns:[{key:'Marque',label:'Marque',type:'text'},{key:'info',label:'N° de série',type:'text'}], defaultRow:{Marque:'', info:''}},
-  'Laptop': { columns:[{key:'marque',label:'Marque',type:'text'},{key:'nom',label:"Nom de l'ordinateur",type:'text'},{key:'serie',label:'N° de série',type:'text'}], defaultRow:{marque:'',nom:'',serie:''}},
-  'Moniteur': { columns:[{key:'marque',label:'Marque',type:'text'},{key:'serie',label:'N° de série',type:'text'}], defaultRow:{marque:'',serie:''}},
-  'Tablette': { columns:[{key:'marque',label:'Marque',type:'text'},{key:'serie',label:'N° de série',type:'text'}], defaultRow:{marque:'',serie:''}},
-  'Accessoire': { columns:[{key:'detail',label:'Précisez',type:'text'},{key:'marque',label:'Marque',type:'text'},{key:'serie',label:'N° de série',type:'text'}], defaultRow:{detail:'',marque:'',serie:''}},
-  'Autres': { columns:[{key:'detail',label:'Veuillez préciser',type:'text'}], defaultRow:{detail:''}},
-};
-
-function handleReturnToggle(checkbox) {
+function handleRetourActionToggle(checkbox, tablesContainer, actionId) {
   const type = checkbox.dataset.type;
+  const blockId = `retourActionTable-${actionId}-${type}`;
   if (checkbox.checked) {
-    if (!document.querySelector(`#returnTableBlock-${type}`)) {
-      const block = createReturnTable(type);
-      const labels = Array.from(document.querySelectorAll('#returnMaterialCheckboxes label'));
-      const after = labels.find(l => l.querySelector(`input[data-type="${type}"]`));
-      if (after && after.parentNode) after.parentNode.insertBefore(block, after.nextSibling);
-      else {
-        const container = document.getElementById('returnTablesContainer');
-        if (container) container.appendChild(block);
-      }
+    if (!document.getElementById(blockId)) {
+      const block = createRetourActionTable(type, actionId);
+      block.id = blockId;
+      tablesContainer.appendChild(block);
     }
   } else {
-    const b = document.querySelector(`#returnTableBlock-${type}`);
+    const b = document.getElementById(blockId);
     if (b) b.remove();
   }
 }
+
 
 function createReturnTable(type) {
   const cfg = returnConfig[type];
@@ -575,61 +798,74 @@ if (btnPDF) {
 }
 
 
-//Generate pdf global/////////////////////////////////////
-///////////////////////////////////////////
-//////////////////////////////////////////
-//Generate pdf global////////////////////////////////
+// Generate pdf global ////////////////////////////////
 async function genererPDFGlobal() {
   try {
     const { jsPDF } = window.jspdf;
     const element = document.getElementById('formMateriel');
     if (!element) return;
 
-    // --- 1. PRÉPARATION DES STYLES (ÉCRAN -> CAPTURE) ---
+    // --- 1. PRÉPARATION DES STYLES ET NETTOYAGE ---
     const originalStyle = element.style.cssText;
+    const inputs = element.querySelectorAll('input, textarea');
+    const originalPlaceholders = [];
+
+    // Sauvegarder et vider les placeholders si le champ est vide
+    inputs.forEach(input => {
+      originalPlaceholders.push({ el: input, txt: input.placeholder });
+      if (!input.value.trim()) {
+        input.placeholder = ""; 
+      }
+    });
     
-    // On uniformise le fond et on protège le contour vert
+    // Uniformiser le fond pour la capture
     element.style.boxShadow = 'none'; 
     element.style.margin = '0';
     element.style.padding = '20px'; 
     element.style.width = '1000px'; 
-    element.style.backgroundColor = '#c9d9e8'; // Même couleur que le formulaire
+    element.style.backgroundColor = '#c9d9e8';
 
     // --- 2. TRANSFORMATION DU TEXTAREA EN "FICHE" ---
-    // On cible le champ Réserves pour qu'il s'affiche en entier comme du texte simple
-    const reserveTextarea = document.querySelector('textarea');
+    const reserveTextarea = document.querySelector('.reserve-textarea');
     let tempDiv = null;
 
     if (reserveTextarea) {
         tempDiv = document.createElement('div');
-        tempDiv.innerText = reserveTextarea.value || reserveTextarea.placeholder;
+        tempDiv.innerText = reserveTextarea.value || ""; // Ne pas afficher le placeholder ici non plus
         
-        // On copie le style pour que ça ressemble au bloc "Déclaration de l'employé"
         tempDiv.style.width = reserveTextarea.offsetWidth + 'px';
         tempDiv.style.fontSize = window.getComputedStyle(reserveTextarea).fontSize;
         tempDiv.style.fontFamily = window.getComputedStyle(reserveTextarea).fontFamily;
         tempDiv.style.color = "#222";
-        tempDiv.style.whiteSpace = "pre-wrap"; // Important pour voir toutes les lignes
+        tempDiv.style.whiteSpace = "pre-wrap";
         tempDiv.style.background = "transparent";
         tempDiv.style.border = "none";
         tempDiv.style.padding = "0";
         tempDiv.style.marginBottom = "20px";
 
-        // On masque le champ blanc et on insère le texte pur
         reserveTextarea.style.display = 'none';
         reserveTextarea.parentNode.insertBefore(tempDiv, reserveTextarea);
     }
 
     // --- 3. CAPTURE HAUTE DÉFINITION ---
+    // On utilise scrollHeight pour être certain de prendre toute la hauteur, même si c'est long
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
-      backgroundColor: '#c9d9e8', // Remplit les bords extérieurs avec votre couleur
-      logging: false
+      backgroundColor: '#c9d9e8',
+      logging: false,
+      windowWidth: element.scrollWidth,
+      windowHeight: element.scrollHeight 
     });
 
-    // --- 4. RESTAURATION DE L'INTERFACE UTILISATEUR ---
+    // --- 4. RESTAURATION DE L'INTERFACE ---
     element.style.cssText = originalStyle;
+    
+    // Restaurer les placeholders pour l'utilisateur
+    originalPlaceholders.forEach(item => {
+      item.el.placeholder = item.txt;
+    });
+
     if (reserveTextarea && tempDiv) {
         reserveTextarea.style.display = 'block';
         tempDiv.remove();
@@ -637,20 +873,21 @@ async function genererPDFGlobal() {
 
     // --- 5. CRÉATION DU PDF ---
     const imgData = canvas.toDataURL('image/png');
-    const pdfWidth = 595.28; // Largeur A4
-    const margin = 15; // Marge de sécurité pour ne pas couper le cadre vert
+    const pdfWidth = 595.28; // A4 point width
+    const margin = 15;
     const usableWidth = pdfWidth - (margin * 2);
+    
+    // Calcul de la hauteur proportionnelle
     const imgHeight = (canvas.height * usableWidth) / canvas.width;
 
-    // On crée le PDF (la hauteur s'adapte au contenu pour ne rien couper)
+    // Création du PDF avec une hauteur dynamique pour éviter les coupures
     const pdf = new jsPDF('p', 'pt', [pdfWidth, imgHeight + (margin * 2)]);
 
-    // On peint tout le fond du PDF avec votre couleur bleu-gris
-    // (RGB pour #c9d9e8 est environ 201, 217, 232)
+    // Fond bleu-gris
     pdf.setFillColor(201, 217, 232); 
     pdf.rect(0, 0, pdfWidth, pdf.internal.pageSize.getHeight(), 'F');
 
-    // On pose l'image centrée (X=15, Y=15)
+    // Image centrée
     pdf.addImage(imgData, 'PNG', margin, margin, usableWidth, imgHeight);
     
     pdf.save('Formulaire_CDENE_vrf.pdf');
@@ -660,10 +897,3 @@ async function genererPDFGlobal() {
     alert("Une erreur est survenue lors de la création du PDF.");
   }
 }
-// Ajouter l'écouteur pour le bouton Envoyer par Email
-const btnSendEmail = document.getElementById('btnSendEmail');
-if (btnSendEmail) {
-  btnSendEmail.addEventListener('click', envoyerParEmail);
-}
-
-
