@@ -34,6 +34,272 @@ function showCustomAlert(message) {
   });
 }
 
+/* ========== Supabase (collecte admin) ========== */
+const SUPABASE_URL = 'https://wiveffsyxbvfzkdtxhdn.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpdmVmZnN5eGJ2ZnprZHR4aGRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwOTUxODgsImV4cCI6MjA4NTY3MTE4OH0._Li96ZKL5gcmYzlBoYe-sViSxAKLNJTzv3kYCp2ogLI';
+const SUPABASE_TABLE = 'suivi_admin_materiel';
+// Colonne commentaire dans la base :
+const COMMENT_COLUMN = 'commentaire';
+let supabaseClient = null;
+const DEBUG_MODE = new URLSearchParams(window.location.search).get('debug') === '1';
+let debugStatusEl = null;
+
+function getSupabaseClient() {
+  if (supabaseClient) return supabaseClient;
+  if (!window.supabase || !window.supabase.createClient) return null;
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return supabaseClient;
+}
+
+function setDebugStatus(message, isError) {
+  if (!DEBUG_MODE) return;
+  if (!debugStatusEl) {
+    debugStatusEl = document.createElement('div');
+    debugStatusEl.style.position = 'fixed';
+    debugStatusEl.style.right = '12px';
+    debugStatusEl.style.bottom = '12px';
+    debugStatusEl.style.zIndex = '9999';
+    debugStatusEl.style.padding = '10px 12px';
+    debugStatusEl.style.borderRadius = '8px';
+    debugStatusEl.style.fontSize = '12px';
+    debugStatusEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+    document.body.appendChild(debugStatusEl);
+  }
+  debugStatusEl.style.background = isError ? '#fce4e4' : '#e8f5e9';
+  debugStatusEl.style.border = isError ? '1px solid #c0392b' : '1px solid #1e4f38';
+  debugStatusEl.style.color = isError ? '#c0392b' : '#1e4f38';
+  debugStatusEl.textContent = message;
+}
+
+function normalizeText(val) {
+  return (val || '').toString().trim();
+}
+
+function normalizeInt(val) {
+  const n = parseInt(val, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+function cleanRow(row) {
+  if (row.comment !== undefined && COMMENT_COLUMN !== 'comment') {
+    row[COMMENT_COLUMN] = row.comment;
+    delete row.comment;
+  }
+  const cleaned = {};
+  Object.keys(row).forEach(k => {
+    const v = row[k];
+    cleaned[k] = (v === '' || v === undefined) ? null : v;
+  });
+  return cleaned;
+}
+
+function getPageName() {
+  const path = window.location.pathname || '';
+  return path.split('/').pop() || path || 'page';
+}
+
+function collectAttributionEntries() {
+  const form = document.getElementById('blocAttribution');
+  if (!form) return [];
+
+  const employe = normalizeText(document.getElementById('nomAttribution')?.value);
+  const gestionnaire = normalizeText(document.getElementById('gestionnaireAttribution')?.value);
+  const actionDate = normalizeText(document.getElementById('dateRestitution1')?.value);
+
+  const rows = [];
+  document.querySelectorAll('#attributionTbody tr').forEach(tr => {
+    const type = normalizeText(tr.querySelector('select')?.value);
+    const marque = normalizeText(tr.querySelector('.marque')?.value);
+    const nom = normalizeText(tr.querySelector('.nom')?.value);
+    const serie = normalizeText(tr.querySelector('.serie')?.value);
+    const quantite = normalizeInt(tr.querySelector('.quantite')?.value);
+
+    const hasAny = type || marque || nom || serie || quantite !== null;
+    if (!hasAny) return;
+
+    rows.push(cleanRow({
+      form_type: 'attribution',
+      action_type: 'Attribution',
+      action_date: actionDate || null,
+      role: 'Attribution',
+      type: getTypeLabel(type),
+      marque,
+      nom,
+      serie,
+      quantite,
+      etat: null,
+      comment: null,
+      employe,
+      gestionnaire,
+      source_page: getPageName(),
+      extra: null
+    }));
+  });
+
+  return rows;
+}
+
+function collectSuiviEntries() {
+  const form = document.getElementById('blocSuiviRestitution');
+  if (!form) return [];
+
+  const employe = normalizeText(document.getElementById('nomSuivi')?.value);
+  const gestionnaire = normalizeText(document.getElementById('gestionnaireSuivi')?.value);
+
+  const rows = [];
+  document.querySelectorAll('.action-block').forEach(block => {
+    const actionSelect = block.querySelector('.action-header select');
+    const actionType = normalizeText(actionSelect?.value);
+    if (!actionType) return;
+
+    const actionDate = normalizeText(block.querySelector('.action-header input[type="date"]')?.value);
+    const actionId = block.dataset.actionId || '';
+    const extraBase = actionId ? JSON.stringify({ action_id: actionId }) : null;
+
+    if (actionType === 'Ajout' || actionType === 'Changement') {
+      const nouveauBlock = block.querySelector('.sub-block[data-role="nouveau"]');
+      const retourBlock = block.querySelector('.sub-block[data-role="retour"]');
+
+      if (actionType === 'Changement' && retourBlock) {
+        const type = normalizeText(readFieldValue(retourBlock, 'type'));
+        const row = cleanRow({
+          form_type: 'suivi',
+          action_type: actionType,
+          action_date: actionDate || null,
+          role: 'Retourné',
+          type: getTypeLabel(type),
+          marque: normalizeText(readFieldValue(retourBlock, 'marque')),
+          nom: normalizeText(readFieldValue(retourBlock, 'nom')),
+          serie: normalizeText(readFieldValue(retourBlock, 'serie')),
+          quantite: normalizeInt(readFieldValue(retourBlock, 'quantite')),
+          etat: normalizeText(readFieldValue(retourBlock, 'etat')),
+          comment: normalizeText(readFieldValue(retourBlock, 'comment')),
+          employe,
+          gestionnaire,
+          source_page: getPageName(),
+          extra: extraBase
+        });
+        const hasAny = row.type || row.marque || row.nom || row.serie || row.quantite !== null || row.etat || row.comment;
+        if (hasAny) rows.push(row);
+      }
+
+      if (nouveauBlock) {
+        const type = normalizeText(readFieldValue(nouveauBlock, 'type'));
+        const row = cleanRow({
+          form_type: 'suivi',
+          action_type: actionType,
+          action_date: actionDate || null,
+          role: 'Reçu',
+          type: getTypeLabel(type),
+          marque: normalizeText(readFieldValue(nouveauBlock, 'marque')),
+          nom: normalizeText(readFieldValue(nouveauBlock, 'nom')),
+          serie: normalizeText(readFieldValue(nouveauBlock, 'serie')),
+          quantite: normalizeInt(readFieldValue(nouveauBlock, 'quantite')),
+          etat: normalizeText(readFieldValue(nouveauBlock, 'etat')),
+          comment: normalizeText(readFieldValue(nouveauBlock, 'comment')),
+          employe,
+          gestionnaire,
+          source_page: getPageName(),
+          extra: extraBase
+        });
+        const hasAny = row.type || row.marque || row.nom || row.serie || row.quantite !== null || row.etat || row.comment;
+        if (hasAny) rows.push(row);
+      }
+    } else if (actionType === 'Retour') {
+      const inlineBlocks = block.querySelectorAll('.retour-inline-fields');
+      inlineBlocks.forEach(inlineBlock => {
+        const type = inlineBlock.dataset.type || '';
+        const typeLabel = getRetourTypeLabel(block, type);
+        const row = cleanRow({
+          form_type: 'suivi',
+          action_type: actionType,
+          action_date: actionDate || null,
+          role: 'Restitué',
+          type: typeLabel,
+          marque: normalizeText(readFieldValue(inlineBlock, 'marque')),
+          nom: normalizeText(readFieldValue(inlineBlock, 'nom')),
+          serie: normalizeText(readFieldValue(inlineBlock, 'serie')),
+          quantite: normalizeInt(readFieldValue(inlineBlock, 'quantite')),
+          etat: normalizeText(readFieldValue(inlineBlock, 'etat')),
+          comment: normalizeText(readFieldValue(inlineBlock, 'comment')),
+          employe,
+          gestionnaire,
+          source_page: getPageName(),
+          extra: extraBase
+        });
+        const hasAny = row.type || row.marque || row.nom || row.serie || row.quantite !== null || row.etat || row.comment;
+        if (hasAny) rows.push(row);
+      });
+    } else if (actionType === 'Autre') {
+      const otherDesc = normalizeText(block.querySelector('.action-content textarea')?.value);
+      if (otherDesc) {
+        rows.push(cleanRow({
+          form_type: 'suivi',
+          action_type: actionType,
+          action_date: actionDate || null,
+          role: 'Autre',
+          type: 'Autre action',
+          marque: null,
+          nom: null,
+          serie: null,
+          quantite: null,
+          etat: null,
+          comment: otherDesc,
+          employe,
+          gestionnaire,
+          source_page: getPageName(),
+          extra: extraBase
+        }));
+      }
+    }
+  });
+
+  return rows;
+}
+
+function collectAllEntries() {
+  return [...collectAttributionEntries(), ...collectSuiviEntries()];
+}
+
+let saveTimeoutId = null;
+const SAVE_DEBOUNCE_MS = 4000;
+const LAST_HASH_KEY = `cdene_last_hash_${getPageName()}`;
+
+function scheduleAutoSave() {
+  if (saveTimeoutId) clearTimeout(saveTimeoutId);
+  saveTimeoutId = setTimeout(() => {
+    sendEntriesToSupabase('auto');
+  }, SAVE_DEBOUNCE_MS);
+}
+
+async function sendEntriesToSupabase(trigger) {
+  const client = getSupabaseClient();
+  if (!client) {
+    setDebugStatus('Supabase non chargé (CDN).', true);
+    return;
+  }
+
+  const rows = collectAllEntries();
+  if (!rows.length) {
+    setDebugStatus('Aucune donnée à envoyer.', true);
+    return;
+  }
+
+  const payloadHash = JSON.stringify(rows);
+  const lastHash = localStorage.getItem(LAST_HASH_KEY);
+  if (payloadHash === lastHash && trigger === 'auto') return;
+
+  setDebugStatus('Envoi vers Supabase...', false);
+  const { error } = await client.from(SUPABASE_TABLE).insert(rows);
+  if (!error) {
+    localStorage.setItem(LAST_HASH_KEY, payloadHash);
+    setDebugStatus(`Envoyé (${rows.length})`, false);
+  } else {
+    console.error('Supabase insert error:', error);
+    setDebugStatus(`Erreur Supabase: ${error.message}`, true);
+  }
+}
+
 /* ========== Formulaire 1 Attribution du matériel (....) ========== */
 const attributionTypes = {
   'Cles': { label:'Clés du bureau', show:{marque:false, nom:false, serie:false, quantite:true} },
@@ -68,6 +334,7 @@ function addAttributionRow() {
     <td><button type="button" class="no-pdf" onclick="removeAttributionRow(this)">❌</button></td>
   `;
   tbody.appendChild(tr);
+  updateAttributionSummary();
 }
 
 async function removeAttributionRow(button) {
@@ -75,6 +342,7 @@ async function removeAttributionRow(button) {
   const confirmed = await showCustomConfirm("Êtes-vous sûr de vouloir supprimer cette ligne ?");
   if (confirmed) {
     row.remove();
+    updateAttributionSummary();
   }
 }
 
@@ -95,12 +363,210 @@ function updateAttrRow(select){
   if (nom) { nom.disabled = !type.show.nom; if(!type.show.nom) nom.value = ''; }
   if (serie) { serie.disabled = !type.show.serie; if(!type.show.serie) serie.value = ''; }
   if (quantite) { quantite.disabled = !type.show.quantite; if(!type.show.quantite) quantite.value = ''; }
+
+  updateAttributionSummary();
+}
+
+function getTypeLabel(type) {
+  if (!type) return '';
+  if (attributionTypes && attributionTypes[type] && attributionTypes[type].label) return attributionTypes[type].label;
+  return type;
+}
+
+function buildSummaryTable(headers, rows) {
+  const table = document.createElement('table');
+  table.className = 'summary-table';
+
+  const thead = document.createElement('thead');
+  const trh = document.createElement('tr');
+  headers.forEach(h => {
+    const th = document.createElement('th');
+    th.textContent = h;
+    trh.appendChild(th);
+  });
+  thead.appendChild(trh);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    r.forEach(cell => {
+      const td = document.createElement('td');
+      td.textContent = cell || '';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+
+  return table;
+}
+
+function updateAttributionSummary() {
+  const container = document.getElementById('attributionSummary');
+  if (!container) return;
+
+  const rows = [];
+  const trs = document.querySelectorAll('#attributionTbody tr');
+  trs.forEach(tr => {
+    const type = tr.querySelector('select')?.value || '';
+    const marque = tr.querySelector('.marque')?.value?.trim() || '';
+    const nom = tr.querySelector('.nom')?.value?.trim() || '';
+    const serie = tr.querySelector('.serie')?.value?.trim() || '';
+    const quantite = tr.querySelector('.quantite')?.value?.trim() || '';
+    const hasAny = type || marque || nom || serie || quantite;
+    if (!hasAny) return;
+
+    rows.push([
+      getTypeLabel(type),
+      marque,
+      nom,
+      serie,
+      quantite
+    ]);
+  });
+
+  container.innerHTML = '';
+  const title = document.createElement('div');
+  title.className = 'summary-title';
+  title.textContent = 'Résumé - Attribution';
+  container.appendChild(title);
+
+  if (rows.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'summary-empty';
+    empty.textContent = 'Aucun élément';
+    container.appendChild(empty);
+    return;
+  }
+
+  const headers = ['Type', 'Marque', 'Nom', 'N° de série', 'Quantité'];
+  container.appendChild(buildSummaryTable(headers, rows));
+}
+
+function readFieldValue(container, field) {
+  if (!container) return '';
+  const el = container.querySelector(`[data-field="${field}"]`);
+  if (!el) return '';
+  return (el.value || '').trim();
+}
+
+function getRetourTypeLabel(actionBlock, type) {
+  let label = getTypeLabel(type);
+  if (type === 'Autres' && actionBlock) {
+    const cb = actionBlock.querySelector(`input[type="checkbox"][data-type="${type}"]`);
+    const cbLabel = cb ? cb.closest('label') : null;
+    const extra = cbLabel ? cbLabel.querySelector('input[type="text"]') : null;
+    const extraVal = extra ? extra.value.trim() : '';
+    if (extraVal) label = `${label} - ${extraVal}`;
+  }
+  return label;
+}
+
+function updateActionSummary(block) {
+  if (!block) return;
+  const summary = block.querySelector('.action-summary');
+  if (!summary) return;
+
+  const actionSelect = block.querySelector('.action-header select');
+  const actionVal = actionSelect ? actionSelect.value : '';
+  const actionLabels = { Ajout: 'Ajout du mat\u00e9riel', Changement: 'Changement du mat\u00e9riel', Retour: 'Retour du mat\u00e9riel', Autre: 'Autre action' };
+
+  summary.innerHTML = '';
+  const title = document.createElement('div');
+  title.className = 'summary-title';
+  title.textContent = actionVal ? `R\u00e9sum\u00e9 - ${actionLabels[actionVal] || actionVal}` : 'R\u00e9sum\u00e9 de l\'action';
+  summary.appendChild(title);
+
+  const headers = ['R\u00f4le', 'Type', 'Marque', 'Nom', 'N\u00b0 de s\u00e9rie', 'Quantit\u00e9', '\u00c9tat', 'Commentaire'];
+  const rows = [];
+
+  if (actionVal === 'Ajout' || actionVal === 'Changement') {
+    const nouveauBlock = block.querySelector('.sub-block[data-role="nouveau"]');
+    const retourBlock = block.querySelector('.sub-block[data-role="retour"]');
+
+    if (actionVal === 'Changement' && retourBlock) {
+      const type = readFieldValue(retourBlock, 'type');
+      const hasAny = type || readFieldValue(retourBlock, 'marque') || readFieldValue(retourBlock, 'nom') || readFieldValue(retourBlock, 'serie') || readFieldValue(retourBlock, 'quantite') || readFieldValue(retourBlock, 'etat') || readFieldValue(retourBlock, 'comment');
+      if (hasAny) {
+        rows.push([
+          'Retourn\u00e9',
+          getTypeLabel(type),
+          readFieldValue(retourBlock, 'marque'),
+          readFieldValue(retourBlock, 'nom'),
+          readFieldValue(retourBlock, 'serie'),
+          readFieldValue(retourBlock, 'quantite'),
+          readFieldValue(retourBlock, 'etat'),
+          readFieldValue(retourBlock, 'comment')
+        ]);
+      }
+    }
+
+    if (nouveauBlock) {
+      const type = readFieldValue(nouveauBlock, 'type');
+      const hasAny = type || readFieldValue(nouveauBlock, 'marque') || readFieldValue(nouveauBlock, 'nom') || readFieldValue(nouveauBlock, 'serie') || readFieldValue(nouveauBlock, 'quantite') || readFieldValue(nouveauBlock, 'etat') || readFieldValue(nouveauBlock, 'comment');
+      if (hasAny) {
+        rows.push([
+          'Re\u00e7u',
+          getTypeLabel(type),
+          readFieldValue(nouveauBlock, 'marque'),
+          readFieldValue(nouveauBlock, 'nom'),
+          readFieldValue(nouveauBlock, 'serie'),
+          readFieldValue(nouveauBlock, 'quantite'),
+          readFieldValue(nouveauBlock, 'etat'),
+          readFieldValue(nouveauBlock, 'comment')
+        ]);
+      }
+    }
+  } else if (actionVal === 'Retour') {
+    const inlineBlocks = block.querySelectorAll('.retour-inline-fields');
+    inlineBlocks.forEach(inlineBlock => {
+      const type = inlineBlock.dataset.type || '';
+      const typeLabel = getRetourTypeLabel(block, type);
+      const hasAny = type || readFieldValue(inlineBlock, 'marque') || readFieldValue(inlineBlock, 'nom') || readFieldValue(inlineBlock, 'serie') || readFieldValue(inlineBlock, 'quantite') || readFieldValue(inlineBlock, 'etat') || readFieldValue(inlineBlock, 'comment');
+      if (!hasAny) return;
+      rows.push([
+        'Restitu\u00e9',
+        typeLabel,
+        readFieldValue(inlineBlock, 'marque'),
+        readFieldValue(inlineBlock, 'nom'),
+        readFieldValue(inlineBlock, 'serie'),
+        readFieldValue(inlineBlock, 'quantite'),
+        readFieldValue(inlineBlock, 'etat'),
+        readFieldValue(inlineBlock, 'comment')
+      ]);
+    });
+  }
+
+  if (rows.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'summary-empty';
+    empty.textContent = 'Aucun \u00e9l\u00e9ment';
+    summary.appendChild(empty);
+    return;
+  }
+
+  summary.appendChild(buildSummaryTable(headers, rows));
+}
+
+function attachActionSummaryListeners(block) {
+  if (!block) return;
+  if (block.dataset.summaryBound === '1') return;
+  block.dataset.summaryBound = '1';
+  block.addEventListener('input', () => updateActionSummary(block));
+  block.addEventListener('change', () => updateActionSummary(block));
 }
 
 const btnAddAttr = document.getElementById("btnAddAttributionRow");
 if (btnAddAttr) {
   btnAddAttr.onclick = addAttributionRow;
 }
+const attributionTable = document.getElementById("attributionTable");
+if (attributionTable) {
+  attributionTable.addEventListener('input', updateAttributionSummary);
+  attributionTable.addEventListener('change', updateAttributionSummary);
+}
+updateAttributionSummary();
 
 /* ========== Bloc 2 (Suivi) ========== */
 let actionCounter = 0;
@@ -180,6 +646,11 @@ function createActionBlock(id) {
   block.appendChild(content);
   content.appendChild(otherDesc);
 
+  const summary = document.createElement('div');
+  summary.className = 'summary-block action-summary';
+  summary.innerHTML = '<div class="summary-title">Résumé de l\'action</div><div class="summary-empty">Aucun élément</div>';
+  block.appendChild(summary);
+
   select.addEventListener('change', (e) => {
     const val = e.target.value;
     [retourBlock, nouveauBlock, retourCheckboxBlock].forEach(sb => { if (sb.parentNode === content) content.removeChild(sb); });
@@ -188,8 +659,11 @@ function createActionBlock(id) {
     else if (val === 'Changement') { content.appendChild(retourBlock); content.appendChild(nouveauBlock); }
     else if (val === 'Retour') content.appendChild(retourCheckboxBlock);
     else if (val === 'Autre') otherDesc.style.display = 'block';
+    updateActionSummary(block);
   });
 
+  attachActionSummaryListeners(block);
+  updateActionSummary(block);
   return block;
 }
 
@@ -236,8 +710,13 @@ function duplicateAction(block) {
       else if (val === 'Changement') { content.appendChild(retourBlock); content.appendChild(nouveauBlock); }
       else if (val === 'Retour') content.appendChild(retourCheckboxBlock);
       else if (val === 'Autre') otherDesc.style.display = 'block';
+
+      updateActionSummary(clone);
     });
   }
+
+  attachActionSummaryListeners(clone);
+  updateActionSummary(clone);
 
   // 3. Insérer le clone dans le DOM
   block.parentNode.insertBefore(clone, block.nextSibling);
@@ -246,6 +725,7 @@ function duplicateAction(block) {
 function createMaterielSubBlock(actionId, role) {
   const container = document.createElement('div');
   container.className = 'sub-block';
+  container.dataset.role = role;
   container.style.marginTop = '12px';
   container.style.padding = '15px';
   container.style.background = role === 'nouveau' ? '#e8f5e9' : '#fff3e0';
@@ -263,6 +743,7 @@ function createMaterielSubBlock(actionId, role) {
   typeDiv.style.marginBottom = '12px';
   typeDiv.innerHTML = '<label style="font-weight:bold;">Type de matériel</label>';
   const typeSelect = document.createElement('select');
+  typeSelect.dataset.field = 'type';
   typeSelect.innerHTML = `
     <option value="">-- Sélectionner le type --</option>
     <option value="Cles">Clés du bureau</option>
@@ -280,46 +761,58 @@ function createMaterielSubBlock(actionId, role) {
   const fieldsContainer = document.createElement('div');
 
   const marqueDiv = document.createElement('div');
+  marqueDiv.className = 'materiel-field';
   marqueDiv.style.marginTop = '8px';
-  marqueDiv.style.display = 'none';
   marqueDiv.innerHTML = '<label>Marque</label><input type="text">';
+  const marqueInput = marqueDiv.querySelector('input');
+  if (marqueInput) marqueInput.dataset.field = 'marque';
   fieldsContainer.appendChild(marqueDiv);
 
   const nomDiv = document.createElement('div');
+  nomDiv.className = 'materiel-field';
   nomDiv.style.marginTop = '8px';
-  nomDiv.style.display = 'none';
-  nomDiv.innerHTML = '<label>Nom de l\'ordinateur (si applicable)</label><input type="text">';
+  nomDiv.innerHTML = "<label>Nom de l'ordinateur (si applicable)</label><input type=\"text\">";
+  const nomInput = nomDiv.querySelector('input');
+  if (nomInput) nomInput.dataset.field = 'nom';
   fieldsContainer.appendChild(nomDiv);
 
   const serieDiv = document.createElement('div');
+  serieDiv.className = 'materiel-field';
   serieDiv.style.marginTop = '8px';
-  serieDiv.style.display = 'none';
-  serieDiv.innerHTML = '<label>N° de série</label><input type="text">';
+  serieDiv.innerHTML = '<label>N\u00b0 de s\u00e9rie</label><input type="text">';
+  const serieInput = serieDiv.querySelector('input');
+  if (serieInput) serieInput.dataset.field = 'serie';
   fieldsContainer.appendChild(serieDiv);
 
   const quantiteDiv = document.createElement('div');
+  quantiteDiv.className = 'materiel-field';
   quantiteDiv.style.marginTop = '8px';
-  quantiteDiv.style.display = 'none';
-  quantiteDiv.innerHTML = '<label>Quantité</label><input type="number" min="1" value="1" style="width:80px;">';
+  quantiteDiv.innerHTML = '<label>Quantit\u00e9</label><input type="number" min="1" value="1" style="width:80px;">';
+  const quantiteInput = quantiteDiv.querySelector('input');
+  if (quantiteInput) quantiteInput.dataset.field = 'quantite';
   fieldsContainer.appendChild(quantiteDiv);
 
   const etatDiv = document.createElement('div');
+  etatDiv.className = 'materiel-field';
   etatDiv.style.marginTop = '8px';
-  etatDiv.style.display = 'none';
-  etatDiv.innerHTML = '<label>État</label><select><option value="">-- Sélectionner --</option><option value="Bon">Bon</option><option value="Moyen">Moyen</option><option value="Mauvais">Mauvais</option></select>';
+  etatDiv.innerHTML = '<label>\u00c9tat</label><select><option value="">-- S\u00e9lectionner --</option><option value="Bon">Bon</option><option value="Moyen">Moyen</option><option value="Mauvais">Mauvais</option></select>';
+  const etatSelect = etatDiv.querySelector('select');
+  if (etatSelect) etatSelect.dataset.field = 'etat';
   fieldsContainer.appendChild(etatDiv);
 
   const commentDiv = document.createElement('div');
+  commentDiv.className = 'materiel-field';
   commentDiv.style.marginTop = '8px';
-  commentDiv.style.display = 'none';
   commentDiv.innerHTML = '<label>Commentaire</label><textarea style="width:100%;min-height:60px;"></textarea>';
+  const commentInput = commentDiv.querySelector('textarea');
+  if (commentInput) commentInput.dataset.field = 'comment';
   fieldsContainer.appendChild(commentDiv);
 
   container.appendChild(fieldsContainer);
 
   const fieldConfig = {
-    'Cles': { marque: false, nom: false, serie: false, quantite: true, etat: true, comment: true },
-    'Badge': { marque: false, nom: false, serie: false, quantite: true, etat: true, comment: true },
+    'Cles': { marque: false, nom: false, serie: false, quantite: true, etat: false, comment: false },
+    'Badge': { marque: false, nom: false, serie: false, quantite: true, etat: false, comment: false },
     'LigneTel': { marque: true, nom: false, serie: true, quantite: false, etat: true, comment: true },
     'Laptop': { marque: true, nom: true, serie: true, quantite: false, etat: true, comment: true },
     'Moniteur': { marque: true, nom: false, serie: true, quantite: false, etat: true, comment: true },
@@ -328,20 +821,40 @@ function createMaterielSubBlock(actionId, role) {
     'Autres': { marque: true, nom: true, serie: true, quantite: false, etat: true, comment: true }
   };
 
-  typeSelect.addEventListener('change', function() {
-    const config = fieldConfig[this.value];
-    if (config) {
-      marqueDiv.style.display = config.marque ? 'block' : 'none';
-      nomDiv.style.display = config.nom ? 'block' : 'none';
-      serieDiv.style.display = config.serie ? 'block' : 'none';
-      quantiteDiv.style.display = config.quantite ? 'block' : 'none';
-      etatDiv.style.display = config.etat ? 'block' : 'none';
-      commentDiv.style.display = config.comment ? 'block' : 'none';
-    } else {
-      [marqueDiv, nomDiv, serieDiv, quantiteDiv, etatDiv, commentDiv].forEach(d => d.style.display = 'none');
+  const fieldRefs = [
+    { key: 'marque', wrapper: marqueDiv, input: marqueDiv.querySelector('input') },
+    { key: 'nom', wrapper: nomDiv, input: nomDiv.querySelector('input') },
+    { key: 'serie', wrapper: serieDiv, input: serieDiv.querySelector('input') },
+    { key: 'quantite', wrapper: quantiteDiv, input: quantiteDiv.querySelector('input') },
+    { key: 'etat', wrapper: etatDiv, input: etatDiv.querySelector('select') },
+    { key: 'comment', wrapper: commentDiv, input: commentDiv.querySelector('textarea') }
+  ];
+
+  function setFieldState(wrapper, input, enabled) {
+    if (!wrapper || !input) return;
+    wrapper.classList.toggle('field-disabled', !enabled);
+    input.disabled = !enabled;
+    if (!enabled) {
+      input.value = '';
     }
+  }
+
+  function applyTypeConfig(typeValue) {
+    const config = fieldConfig[typeValue];
+    if (!config) {
+      fieldRefs.forEach(f => setFieldState(f.wrapper, f.input, false));
+      return;
+    }
+    fieldRefs.forEach(f => {
+      setFieldState(f.wrapper, f.input, !!config[f.key]);
+    });
+  }
+
+  typeSelect.addEventListener('change', function() {
+    applyTypeConfig(this.value);
   });
 
+  applyTypeConfig(typeSelect.value);
   // Signatures
   const sigDiv = document.createElement('div');
   sigDiv.className = 'two-col';
@@ -576,19 +1089,123 @@ function createRetourCheckboxBlock(actionId) {
 
 function handleRetourActionToggle(checkbox, tablesContainer, actionId) {
   const type = checkbox.dataset.type;
-  const blockId = `retourActionTable-${actionId}-${type}`;
+  const blockId = `retourInline-${actionId}-${type}`;
+  const anchor = checkbox.closest('label');
   if (checkbox.checked) {
     if (!document.getElementById(blockId)) {
-      const block = createRetourActionTable(type, actionId);
+      const block = createRetourInlineFields(type, actionId);
       block.id = blockId;
-      tablesContainer.appendChild(block);
+      if (anchor && anchor.parentNode) {
+        anchor.insertAdjacentElement('afterend', block);
+      } else if (tablesContainer) {
+        tablesContainer.appendChild(block);
+      }
     }
   } else {
     const b = document.getElementById(blockId);
     if (b) b.remove();
   }
+
+  const actionBlock = checkbox.closest('.action-block');
+  if (actionBlock) updateActionSummary(actionBlock);
 }
 
+function createRetourInlineFields(type, actionId) {
+  const container = document.createElement('div');
+  container.className = 'retour-inline-fields';
+  container.dataset.type = type;
+  container.dataset.actionId = actionId;
+
+  const title = document.createElement('div');
+  title.className = 'retour-inline-title';
+  const label = (attributionTypes && attributionTypes[type] && attributionTypes[type].label) ? attributionTypes[type].label : type;
+  title.textContent = `D\u00e9tails - ${label}`;
+  container.appendChild(title);
+
+  const grid = document.createElement('div');
+  grid.className = 'retour-inline-grid';
+  container.appendChild(grid);
+
+  const marqueDiv = document.createElement('div');
+  marqueDiv.className = 'retour-field';
+  marqueDiv.innerHTML = '<label>Marque</label><input type="text">';
+  const marqueInput = marqueDiv.querySelector('input');
+  if (marqueInput) marqueInput.dataset.field = 'marque';
+  grid.appendChild(marqueDiv);
+
+  const nomDiv = document.createElement('div');
+  nomDiv.className = 'retour-field';
+  nomDiv.innerHTML = "<label>Nom de l'ordinateur (si applicable)</label><input type=\"text\">";
+  const nomInput = nomDiv.querySelector('input');
+  if (nomInput) nomInput.dataset.field = 'nom';
+  grid.appendChild(nomDiv);
+
+  const serieDiv = document.createElement('div');
+  serieDiv.className = 'retour-field';
+  serieDiv.innerHTML = '<label>N\u00b0 de s\u00e9rie</label><input type="text">';
+  const serieInput = serieDiv.querySelector('input');
+  if (serieInput) serieInput.dataset.field = 'serie';
+  grid.appendChild(serieDiv);
+
+  const quantiteDiv = document.createElement('div');
+  quantiteDiv.className = 'retour-field';
+  quantiteDiv.innerHTML = '<label>Quantit\u00e9</label><input type="number" min="1" value="1" style="width:80px;">';
+  const quantiteInput = quantiteDiv.querySelector('input');
+  if (quantiteInput) quantiteInput.dataset.field = 'quantite';
+  grid.appendChild(quantiteDiv);
+
+  const etatDiv = document.createElement('div');
+  etatDiv.className = 'retour-field';
+  etatDiv.innerHTML = '<label>\u00c9tat</label><select><option value="">-- S\u00e9lectionner --</option><option value="Bon">Bon</option><option value="Moyen">Moyen</option><option value="Mauvais">Mauvais</option></select>';
+  const etatSelect = etatDiv.querySelector('select');
+  if (etatSelect) etatSelect.dataset.field = 'etat';
+  grid.appendChild(etatDiv);
+
+  const commentDiv = document.createElement('div');
+  commentDiv.className = 'retour-field field-full';
+  commentDiv.innerHTML = '<label>Commentaire</label><textarea style="width:100%;min-height:60px;"></textarea>';
+  const commentInput = commentDiv.querySelector('textarea');
+  if (commentInput) commentInput.dataset.field = 'comment';
+  grid.appendChild(commentDiv);
+
+  const fieldConfig = {
+    'Cles': { marque: false, nom: false, serie: false, quantite: true, etat: false, comment: false },
+    'Badge': { marque: false, nom: false, serie: false, quantite: true, etat: false, comment: false },
+    'LigneTel': { marque: true, nom: false, serie: true, quantite: false, etat: true, comment: true },
+    'Laptop': { marque: true, nom: true, serie: true, quantite: false, etat: true, comment: true },
+    'Moniteur': { marque: true, nom: false, serie: true, quantite: false, etat: true, comment: true },
+    'Tablette': { marque: true, nom: false, serie: true, quantite: false, etat: true, comment: true },
+    'Accessoire': { marque: true, nom: true, serie: true, quantite: false, etat: true, comment: true },
+    'Autres': { marque: true, nom: true, serie: true, quantite: false, etat: true, comment: true }
+  };
+
+  const fieldRefs = [
+    { key: 'marque', wrapper: marqueDiv, input: marqueDiv.querySelector('input') },
+    { key: 'nom', wrapper: nomDiv, input: nomDiv.querySelector('input') },
+    { key: 'serie', wrapper: serieDiv, input: serieDiv.querySelector('input') },
+    { key: 'quantite', wrapper: quantiteDiv, input: quantiteDiv.querySelector('input') },
+    { key: 'etat', wrapper: etatDiv, input: etatDiv.querySelector('select') },
+    { key: 'comment', wrapper: commentDiv, input: commentDiv.querySelector('textarea') }
+  ];
+
+  function setFieldState(wrapper, input, enabled) {
+    if (!wrapper || !input) return;
+    wrapper.classList.toggle('field-disabled', !enabled);
+    input.disabled = !enabled;
+    if (!enabled) {
+      input.value = '';
+    }
+  }
+
+  const config = fieldConfig[type];
+  if (!config) {
+    fieldRefs.forEach(f => setFieldState(f.wrapper, f.input, false));
+  } else {
+    fieldRefs.forEach(f => setFieldState(f.wrapper, f.input, !!config[f.key]));
+  }
+
+  return container;
+}
 
 function createReturnTable(type) {
   const cfg = returnConfig[type];
@@ -794,7 +1411,22 @@ if (document.readyState === 'loading') {
 
 const btnPDF = document.getElementById('btnDownloadPDF');
 if (btnPDF) {
-  btnPDF.addEventListener('click', genererPDFGlobal);
+  btnPDF.addEventListener('click', async () => {
+    await sendEntriesToSupabase('pdf');
+    genererPDFGlobal();
+  });
+}
+
+const blocAttribution = document.getElementById('blocAttribution');
+if (blocAttribution) {
+  blocAttribution.addEventListener('input', scheduleAutoSave);
+  blocAttribution.addEventListener('change', scheduleAutoSave);
+}
+
+const blocSuivi = document.getElementById('blocSuiviRestitution');
+if (blocSuivi) {
+  blocSuivi.addEventListener('input', scheduleAutoSave);
+  blocSuivi.addEventListener('change', scheduleAutoSave);
 }
 
 
@@ -850,7 +1482,7 @@ async function genererPDFGlobal() {
     // --- 3. CAPTURE HAUTE DÉFINITION ---
     // On utilise scrollHeight pour être certain de prendre toute la hauteur, même si c'est long
     const canvas = await html2canvas(element, {
-      scale: 2,
+      scale: 3,
       useCORS: true,
       backgroundColor: '#c9d9e8',
       logging: false,
@@ -872,7 +1504,7 @@ async function genererPDFGlobal() {
     }
 
     // --- 5. CRÉATION DU PDF ---
-    const imgData = canvas.toDataURL('image/png');
+    const imgData = canvas.toDataURL('image/png', 1.0);
     const pdfWidth = 595.28; // A4 point width
     const margin = 15;
     const usableWidth = pdfWidth - (margin * 2);
@@ -881,16 +1513,30 @@ async function genererPDFGlobal() {
     const imgHeight = (canvas.height * usableWidth) / canvas.width;
 
     // Création du PDF avec une hauteur dynamique pour éviter les coupures
-    const pdf = new jsPDF('p', 'pt', [pdfWidth, imgHeight + (margin * 2)]);
+    const pdf = new jsPDF({
+    orientation: 'p',
+    unit: 'pt',
+    format: [pdfWidth, imgHeight + (margin * 2)],
+    compress: true
+   });
 
     // Fond bleu-gris
     pdf.setFillColor(201, 217, 232); 
     pdf.rect(0, 0, pdfWidth, pdf.internal.pageSize.getHeight(), 'F');
 
     // Image centrée
-    pdf.addImage(imgData, 'PNG', margin, margin, usableWidth, imgHeight);
-    
-    pdf.save('Formulaire_CDENE_vrf.pdf');
+    pdf.addImage(
+  imgData,
+  'PNG',
+  margin,
+  margin,
+  usableWidth,
+  imgHeight,
+  undefined,
+  'FAST' // 👈 meilleur rendu / moins de perte
+);
+
+    pdf.save('Form_Attribution-Materiel.pdf');
 
   } catch (error) {
     console.error('Erreur lors de la génération du PDF:', error);
