@@ -15,7 +15,7 @@ body {
     row-gap: 8px;
     align-items: start;
     background: #c9d9e8;
-    border: 1px solid #6885a5;
+    border: 2px solid #6885a5;
     border-radius: 12px;
     padding: 10px;
     margin-bottom: 20px;
@@ -98,7 +98,7 @@ body {
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 10px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
     page-break-inside: avoid;
     max-width: 900px;
     margin-left: auto;
@@ -339,6 +339,43 @@ button:hover {
     padding: 12px;
     margin-top: 12px;
 }
+.summary-block {
+    margin-top: 12px;
+    padding: 12px;
+    border: 1px solid #7a9ab8;
+    border-radius: 8px;
+    background: #eef6fb;
+}
+.summary-title {
+    font-weight: 700;
+    color: #003a70;
+    margin-bottom: 8px;
+}
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.summary-table th,
+.summary-table td {
+    padding: 6px;
+    border-bottom: 1px solid #cbd9e6;
+    font-size: 0.9rem;
+    vertical-align: top;
+}
+.summary-empty {
+    color: #555;
+    font-style: italic;
+}
+.field-disabled {
+    opacity: 0.6;
+}
+.field-disabled input,
+.field-disabled select,
+.field-disabled textarea {
+    background: #e6e6e6;
+    color: #666;
+    cursor: not-allowed;
+}
 /* Déclaration de l'employé */
 .declaration-text {
     font-family: 'Segoe UI', Arial, sans-serif;
@@ -411,16 +448,44 @@ div[style*="margin-top:auto"] {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  padding: 4px 8px;
-  background: #ffffff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 2px 4px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   font-size: 0.85rem; /* Texte légèrement plus petit */
   transition: background 0.2s;
 }
 
 .checkbox-item:hover {
-  background: #f0f0f0;
+  background: transparent;
+}
+
+/* Champs inline pour restitution */
+.retour-inline-fields {
+  width: 100%;
+  flex: 1 1 100%;
+  margin: 8px 0 12px;
+  padding: 10px;
+  border: 1px solid #b8d5e8;
+  border-radius: 6px;
+  background: #fef9f0;
+}
+.retour-inline-title {
+  font-weight: 700;
+  color: #003a70;
+  margin-bottom: 8px;
+}
+.retour-inline-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.retour-inline-grid > .retour-field {
+  flex: 1 1 220px;
+  min-width: 200px;
+}
+.retour-inline-grid > .field-full {
+  flex: 1 1 100%;
 }
 
 /* Taille de la case elle-même */
@@ -455,4 +520,3 @@ input, select {
         display: none !important;
     }
 }
-
